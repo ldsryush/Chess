@@ -1,4 +1,4 @@
-package chess;Add commentMore actions
+package chess;
 
 import java.util.Objects;
 
@@ -48,7 +48,7 @@ public class ChessMove {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ChessMove chessMove = (ChessMove) o;Add commentMore actions
+        ChessMove chessMove = (ChessMove) o;
         return Objects.equals(start, chessMove.start) && Objects.equals(end, chessMove.end) && promotionPiece == chessMove.promotionPiece;
     }
 

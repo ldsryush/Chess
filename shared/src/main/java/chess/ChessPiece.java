@@ -66,14 +66,12 @@ public class ChessPiece {
 
 //        PAWN
         if (piece.getPieceType() == PieceType.PAWN) {
-
-//            Get the color to find direction of movement
             int dir = 1;
             if (piece.getTeamColor() == ChessGame.TeamColor.BLACK) {
                 dir = -1;
             }
 
-//            Check if the pawn can move forwards (must be empty)
+//            Check if the pawn can move forwards
             ChessPosition newPosition = new ChessPosition(row+dir, col);
             if (board.getPiece(newPosition) == null) {
                 valid_moves.add(new ChessMove(myPosition, newPosition, null));
