@@ -1,6 +1,7 @@
 package chess;
 
 import java.util.Arrays;
+import javax.swing.plaf.basic.BasicHTML;
 
 /**
  * A chessboard that can hold and rearrange chess pieces.
