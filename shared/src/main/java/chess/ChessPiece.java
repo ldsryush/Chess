@@ -14,6 +14,12 @@ public class ChessPiece {
     private ChessGame.TeamColor color;
     private PieceType type;
 
+    private boolean isValidPosition(ChessPosition pos) {
+        int r = pos.getRow();
+        int c = pos.getColumn();
+        return r >= 1 && r <= 8 && c >= 1 && c <= 8;
+    }
+
     public ChessPiece(ChessGame.TeamColor pieceColor, PieceType type) {
         this.color = pieceColor;
         this.type = type;
@@ -53,13 +59,13 @@ public class ChessPiece {
      * @return Collection of valid moves
      */
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition) {
-//        Initialize a collection of the moves
+        // Initialize a collection of the moves
         Collection<ChessMove> valid_moves = new HashSet<>(0);
 
-//        Determine the type of piece to know how to move
+        // Determine the type of piece to know how to move
         ChessPiece piece = board.getPiece(myPosition);
 
-//        Store the row and column
+        // Store the row and column
         int row = myPosition.getRow();
         int col = myPosition.getColumn();
 
@@ -68,11 +74,11 @@ public class ChessPiece {
 
         ChessPosition newPosition;
 
-//        PAWN
+        // PAWN
         if (piece.getPieceType() == PieceType.PAWN) {
             PieceType[] types = {PieceType.QUEEN, PieceType.KNIGHT, PieceType.ROOK, PieceType.BISHOP};
 
-//            Get the color to find direction of movement
+            // Get the color to find direction of movement
             int dir = 1;
             int dist = 1;
             boolean prom = false;
@@ -91,8 +97,8 @@ public class ChessPiece {
                 }
             }
 
-//            Check if the pawn can move forwards (must be empty)
-            newPosition = new ChessPosition(row+dir, col);
+            // Check if the pawn can move forwards (must be empty)
+            newPosition = new ChessPosition(row + dir, col);
             if (board.getPiece(newPosition) == null) {
                 if (prom) {
                     for (var type : types) {
@@ -109,10 +115,10 @@ public class ChessPiece {
                 }
             }
 
-//            Check if the pawn can KO a piece diagonal to it on one direction
+            // Check if the pawn can KO a piece diagonal to it on one direction
             int targetCol = col + 1;
             if (targetCol <= 8) {
-                newPosition = new ChessPosition(row+dir, targetCol);
+                newPosition = new ChessPosition(row + dir, targetCol);
                 ChessPiece target = board.getPiece(newPosition);
                 if (target != null && target.getTeamColor() != piece.getTeamColor()) {
                     if (prom) {
@@ -127,71 +133,68 @@ public class ChessPiece {
             targetCol = col - 1;
             if (targetCol >= 1) {
                 newPosition = new ChessPosition(row + dir, targetCol);
-                ChessPiece target = board.getPiece(newPosition);
-                if (target != null && target.getTeamColor() != piece.getTeamColor()) {
-                    if (prom) {
-                        for (var type : types) {
-                            valid_moves.add(new ChessMove(myPosition, newPosition, type));
+                if (isValidPosition(newPosition)) {
+                    ChessPiece target = board.getPiece(newPosition);
+                    if (target != null && target.getTeamColor() != piece.getTeamColor()) {
+                        if (prom) {
+                            for (var type : types) {
+                                valid_moves.add(new ChessMove(myPosition, newPosition, type));
+                            }
+                        } else {
+                            valid_moves.add(new ChessMove(myPosition, newPosition, null));
                         }
-                    } else {
-                        valid_moves.add(new ChessMove(myPosition, newPosition, null));
+                    }
+                }
+
+                // Check if the pawn can KO a piece diagonal to it on the other direction
+                newPosition = new ChessPosition(row + dir, col - 1);
+                if (board.getPiece(newPosition) != null) {
+                    if (board.getPiece(newPosition).getTeamColor() != piece.getTeamColor()) {
+                        if (prom) {
+                            for (var type : types) {
+                                valid_moves.add(new ChessMove(myPosition, newPosition, type));
+                            }
+                        } else {
+                            valid_moves.add(new ChessMove(myPosition, newPosition, null));
+                        }
                     }
                 }
             }
+        }  // ← end of PAWN block
 
-
-//            Check if the pawn can KO a piece diagonal to it on the other direction
-            newPosition = new ChessPosition(row+dir, col-1);
-            if (board.getPiece(newPosition) != null) {
-                if (board.getPiece(newPosition).getTeamColor() != piece.getTeamColor()) {
-                    if (prom) {
-                        for (var type : types) {
-                            valid_moves.add(new ChessMove(myPosition, newPosition, type));
-                        }
-                    } else {
-                        valid_moves.add(new ChessMove(myPosition, newPosition, null));
-                    }
-                }
-            }
-        }
-
-
-//        BISHOP
+        // BISHOP
         if (piece.getPieceType() == PieceType.BISHOP || piece.getPieceType() == PieceType.QUEEN) {
             int[] dirs = {-1, 1};
-            for (var up : dirs){
+            for (var up : dirs) {
                 for (var side : dirs) {
-                    for (int i=1; i < 8; i++) {
-                        newPosition = new ChessPosition(row + up*i, col + side*i);
+                    for (int i = 1; i < 8; i++) {
+                        newPosition = new ChessPosition(row + up * i, col + side * i);
 
-//                        In bounds?
-                        if (row + up*i > 8 || row + up*i < 1 || col + side*i > 8 || col + side*i < 1) {
+                        // In bounds?
+                        if (row + up * i > 8 || row + up * i < 1 || col + side * i > 8 || col + side * i < 1) {
                             break;
                         }
 
-//                        Empty?
+                        // Empty?
                         if (board.getPiece(newPosition) == null) {
                             valid_moves.add(new ChessMove(myPosition, newPosition, null));
                         }
-
-//                        Can steal?
+                        // Can steal?
                         else if (board.getPiece(newPosition).getTeamColor() != piece.getTeamColor()) {
                             valid_moves.add(new ChessMove(myPosition, newPosition, null));
                             break;
                         }
-
-//                        Can't go there?
+                        // Can't go there?
                         else {
                             break;
                         }
                     }
-
                 }
             }
-
         }
 
 //        KING
+
         if (piece.getPieceType() == PieceType.KING) {
             int[] dirs = {-1, 0, 1};
             for (var up : dirs) {
