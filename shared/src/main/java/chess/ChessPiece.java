@@ -110,9 +110,11 @@ public class ChessPiece {
             }
 
 //            Check if the pawn can KO a piece diagonal to it on one direction
-            newPosition = new ChessPosition(row+dir, col+1);
-            if (board.getPiece(newPosition) != null) {
-                if (board.getPiece(newPosition).getTeamColor() != piece.getTeamColor()) {
+            int targetCol = col + 1;
+            if (targetCol <= 8) {
+                newPosition = new ChessPosition(row+dir, targetCol);
+                ChessPiece target = board.getPiece(newPosition);
+                if (target != null && target.getTeamColor() != piece.getTeamColor()) {
                     if (prom) {
                         for (var type : types) {
                             valid_moves.add(new ChessMove(myPosition, newPosition, type));
@@ -122,6 +124,21 @@ public class ChessPiece {
                     }
                 }
             }
+            targetCol = col - 1;
+            if (targetCol >= 1) {
+                newPosition = new ChessPosition(row + dir, targetCol);
+                ChessPiece target = board.getPiece(newPosition);
+                if (target != null && target.getTeamColor() != piece.getTeamColor()) {
+                    if (prom) {
+                        for (var type : types) {
+                            valid_moves.add(new ChessMove(myPosition, newPosition, type));
+                        }
+                    } else {
+                        valid_moves.add(new ChessMove(myPosition, newPosition, null));
+                    }
+                }
+            }
+
 
 //            Check if the pawn can KO a piece diagonal to it on the other direction
             newPosition = new ChessPosition(row+dir, col-1);
@@ -137,6 +154,7 @@ public class ChessPiece {
                 }
             }
         }
+
 
 //        BISHOP
         if (piece.getPieceType() == PieceType.BISHOP || piece.getPieceType() == PieceType.QUEEN) {
