@@ -12,6 +12,9 @@ public class ChessBoard {
     public void addPiece(ChessPosition pos, ChessPiece piece) {
         board[pos.getRow() - 1][pos.getColumn() - 1] = piece;
     }
+    public void removePiece(ChessPosition pos) {
+        board[pos.getRow()-1][pos.getColumn()-1] = null;
+    }
 
     public ChessPiece getPiece(ChessPosition pos) {
         return board[pos.getRow() - 1][pos.getColumn() - 1];
