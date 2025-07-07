@@ -16,7 +16,17 @@ public class ChessGame {
         this.turn=TeamColor.WHITE;
         this.board=new ChessBoard();
         this.board.resetBoard();
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ChessGame other)) return false;
+        return this.turn == other.turn && this.board.equals(other.board);
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(turn, board);
     }
 
     /**
