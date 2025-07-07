@@ -9,8 +9,13 @@ import java.util.Collection;
  * signature of the existing methods.
  */
 public class ChessGame {
+    private TeamColor turn;
+    private ChessBoard board;
 
     public ChessGame() {
+        this.turn=TeamColor.WHITE;
+        this.board=new ChessBoard();
+        this.board.resetBoard();
 
     }
 
@@ -18,7 +23,7 @@ public class ChessGame {
      * @return Which team's turn it is
      */
     public TeamColor getTeamTurn() {
-        throw new RuntimeException("Not implemented");
+        return this.turn;
     }
 
     /**
@@ -27,7 +32,7 @@ public class ChessGame {
      * @param team the team whose turn it is
      */
     public void setTeamTurn(TeamColor team) {
-        throw new RuntimeException("Not implemented");
+        this.turn=team;
     }
 
     /**
@@ -46,7 +51,11 @@ public class ChessGame {
      * startPosition
      */
     public Collection<ChessMove> validMoves(ChessPosition startPosition) {
-        throw new RuntimeException("Not implemented");
+        if (this.board.getPiece(startPosition)==null) {
+            return null;
+        } else {
+            return this.board.getPiece(startPosition).pieceMoves(this.board,startPosition);
+        }
     }
 
     /**
@@ -56,7 +65,23 @@ public class ChessGame {
      * @throws InvalidMoveException if move is invalid
      */
     public void makeMove(ChessMove move) throws InvalidMoveException {
-        throw new RuntimeException("Not implemented");
+        TeamColor turn = getTeamTurn();
+        ChessPiece piece=this.board.getPiece(move.getStartPosition());
+        TeamColor color=piece.getTeamColor();
+        Collection<ChessMove> possibleMoves=piece.pieceMoves(this.board,move.getStartPosition());
+        if (color!=turn) {
+            throw new InvalidMoveException("Not your turn");
+        } else if (this.board.getPiece(move.getEndPosition())!=null) {
+            if ((this.board.getPiece(move.getEndPosition()).getTeamColor()==color)) {
+                throw new InvalidMoveException("Can't move to position with existing team piece");
+            }
+        } else if (!possibleMoves.contains(move)) {
+            throw new InvalidMoveException("Not possible move");
+        } else if (this.isInCheck(color)) {
+            throw new InvalidMoveException("This move will leave the King in check");
+        } else {
+            this.board.addPiece(move.getEndPosition(), piece);
+        }
     }
 
     /**
