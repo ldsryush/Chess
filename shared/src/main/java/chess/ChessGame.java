@@ -102,7 +102,7 @@ public class ChessGame {
             throw new InvalidMoveException("No piece at the start position");
         }
         TeamColor color = piece.getTeamColor();
-        Collection<ChessMove> possibleMoves = piece.pieceMoves(this.board, move.getStartPosition());
+        Collection<ChessMove> possibleMoves = validMoves(move.getStartPosition());
         if (color != turn) {
             throw new InvalidMoveException("Not this team's turn to move");
         } if (this.board.getPiece(move.getEndPosition()) != null) {
@@ -119,12 +119,6 @@ public class ChessGame {
             ChessPiece takenPiece = this.board.getPiece(move.getEndPosition());
             this.board.addPiece(move.getEndPosition(), newPiece);
             this.board.removePiece(move.getStartPosition());
-
-            if (this.isInCheck(color)) {
-                this.board.addPiece(move.getEndPosition(), takenPiece);
-                this.board.addPiece(move.getStartPosition(), piece);
-                throw new InvalidMoveException("This move will leave the king in check");
-            }
 
             if (this.getTeamTurn() == TeamColor.WHITE) {
                 this.setTeamTurn(TeamColor.BLACK);
@@ -164,8 +158,10 @@ public class ChessGame {
 
                     piece = this.board.getPiece(currPosition);
                     if (piece.getTeamColor() != teamColor) {
-                        if (piece.pieceMoves(this.board, currPosition).contains(new ChessMove(currPosition, kingPosition, null))) {
-                            return true;
+                        for (ChessMove move:piece.pieceMoves(this.board,currPosition)) {
+                            if (move.getEndPosition().equals(kingPosition)) {
+                                return true;
+                            }
                         }
                     }
                 }
