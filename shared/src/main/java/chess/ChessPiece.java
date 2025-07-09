@@ -69,27 +69,7 @@ public class ChessPiece {
             case ROOK   -> generateDirectionalMoves(moves, board, pos, new int[][]{{1,0},{-1,0},{0,1},{0,-1}});
             case QUEEN  -> generateDirectionalMoves(moves, board, pos, new int[][]{{1,1},{1,-1},{-1,1},{-1,-1},{1,0},{-1,0},{0,1},{0,-1}});
             case KNIGHT -> generateJumpMoves(moves, board, pos, new int[][]{{2,1},{1,2},{-1,2},{-2,1},{-2,-1},{-1,-2},{1,-2},{2,-1}});
-            case KING -> {
-                generateJumpMoves(moves, board, pos, new int[][]{{1,1},{1,0},{1,-1},{0,1},{0,-1},{-1,1},{-1,0},{-1,-1}});
-                int row = pos.getRow();
-                // Kingside
-                if (board.getPiece(new ChessPosition(row, 6)) == null &&
-                        board.getPiece(new ChessPosition(row, 7)) == null &&
-                        board.getPiece(new ChessPosition(row, 8)) != null &&
-                        board.getPiece(new ChessPosition(row, 8)).getPieceType() == PieceType.ROOK &&
-                        board.getPiece(new ChessPosition(row, 8)).getTeamColor() == color) {
-                    moves.add(new ChessMove(pos, new ChessPosition(row, 7), null));
-                }
-                // Queenside
-                if (board.getPiece(new ChessPosition(row, 2)) == null &&
-                        board.getPiece(new ChessPosition(row, 3)) == null &&
-                        board.getPiece(new ChessPosition(row, 4)) == null &&
-                        board.getPiece(new ChessPosition(row, 1)) != null &&
-                        board.getPiece(new ChessPosition(row, 1)).getPieceType() == PieceType.ROOK &&
-                        board.getPiece(new ChessPosition(row, 1)).getTeamColor() == color) {
-                    moves.add(new ChessMove(pos, new ChessPosition(row, 3), null));
-                }
-            }
+            case KING -> generateJumpMoves(moves, board, pos, new int[][]{{1,1},{1,0},{1,-1},{0,1},{0,-1},{-1,1},{-1,0},{-1,-1}});
         }
 
         return moves;
