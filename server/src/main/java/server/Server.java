@@ -1,5 +1,6 @@
 package server;
 
+import org.eclipse.jetty.websocket.server.WebSocketHandler;
 import spark.*;
 
 public class Server {
