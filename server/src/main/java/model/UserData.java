@@ -10,5 +10,8 @@ public class UserData {
         this.password = password;
         this.email = email;
     }
+    public String getUsername() {
+        return username;
+    }
 
 }
