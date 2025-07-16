@@ -19,16 +19,21 @@ public class LoginService {
         this.authDAO = authDAO;
     }
 
-
     public AuthData login(LoginRequest loginRequest) throws ResponseException {
+        if (isInvalid(loginRequest.username()) || isInvalid(loginRequest.password())) {
+            throw new ResponseException(400, "error: bad request");
+        }
+
         UserData userData = this.userDAO.getUser(loginRequest.username());
-        if (userData == null) {
+        if (userData == null || !Objects.equals(userData.password(), loginRequest.password())) {
             throw new ResponseException(401, "error: unauthorized");
         }
-        if (Objects.equals(userData.password(), loginRequest.password())) {
-            return this.authDAO.createAuth(userData);
-        } else {
-            throw new ResponseException(401, "error: unauthorized");
-        }
+
+        return this.authDAO.createAuth(userData);
+    }
+
+    private boolean isInvalid(String value) {
+        return value == null || value.isBlank();
     }
 }
+

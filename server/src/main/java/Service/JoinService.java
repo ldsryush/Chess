@@ -16,6 +16,10 @@ public class JoinService {
     }
 
     public void joinGame(JoinGameRequest request, AuthData authData) throws ResponseException {
+        if (request.gameID() == null || request.playerColor() == null) {
+            throw new ResponseException(400, "error: bad request");
+        }
+
         GameData game = gameDAO.getGame(request.gameID());
         if (game == null) {
             throw new ResponseException(400, "error: bad request");
@@ -34,7 +38,7 @@ public class JoinService {
                 throw new ResponseException(403, "error: already taken");
             }
             blackUsername = authData.username();
-        } else if (request.playerColor() != null) {
+        }  else {
             throw new ResponseException(400, "error: bad request");
         }
 
