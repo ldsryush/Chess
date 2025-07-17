@@ -11,16 +11,19 @@ import spark.*;
 
 import java.util.Collection;
 
+/**
+ * Main server class that configures HTTP routes and handles incoming requests.
+ */
 public class Server {
     private static final Gson gson = new Gson();
 
-    // DAOs
+    // 🔧 Data Access Layer (In-Memory Implementation)
     private final DataAccess dataAccess = new DataAccess(DataAccess.DataLocation.MEMORY);
     private final AuthDAO authDAO = dataAccess.getAuthDAO();
     private final UserDAO userDAO = dataAccess.getUserDAO();
     private final GameDAO gameDAO = dataAccess.getGameDAO();
 
-    // Services
+    // 🧠 Service Layer
     private final RegistrationService registrationService = new RegistrationService(userDAO, authDAO);
     private final LoginService loginService = new LoginService(userDAO, authDAO);
     private final LogoutService logoutService = new LogoutService(authDAO);
@@ -32,47 +35,83 @@ public class Server {
 
     public Server() {}
 
+    /**
+     * Starts the Spark server on the specified port and configures routes.
+     *
+     * @param desiredPort the port to run the server on
+     * @return the actual port the server is running on
+     */
     public int run(int desiredPort) {
         Spark.port(desiredPort);
-        Spark.staticFiles.location("web");
-        configureRoutes();
-        Spark.awaitInitialization();
+        Spark.staticFiles.location("web"); // Serves static files from /web
+        configureRoutes();                 // Sets up HTTP endpoints
+        Spark.awaitInitialization();       // Waits for server to be ready
         System.out.println("Server running on port " + Spark.port());
         return Spark.port();
     }
 
+    /**
+     * @return the current port the server is running on
+     */
     public int port() {
         return Spark.port();
     }
 
+    /**
+     * Stops the Spark server.
+     */
     public void stop() {
         Spark.stop();
     }
 
-    // 🔧 Route Configuration
+    /**
+     * Configures all HTTP routes and exception handlers.
+     */
     private void configureRoutes() {
-        Spark.post("/user", this::registrationHandler);
-        Spark.post("/session", this::loginUser);
-        Spark.delete("/session", this::logoutUser);
-        Spark.get("/game", this::getGames);
-        Spark.post("/game", this::createGame);
-        Spark.put("/game", this::joinGame);
-        Spark.delete("/db", this::clearApp);
+        // User account routes
+        Spark.post("/user", this::registrationHandler);   // Register new user
+        Spark.post("/session", this::loginUser);          // Log in
+        Spark.delete("/session", this::logoutUser);       // Log out
+
+        // Game-related routes
+        Spark.get("/game", this::getGames);               // List games
+        Spark.post("/game", this::createGame);            // Create game
+        Spark.put("/game", this::joinGame);               // Join game
+
+        // Admin route
+        Spark.delete("/db", this::clearApp);              // Clear all data
+
+        // Global exception handler
         Spark.exception(ResponseException.class, this::exceptionHandler);
     }
 
-    // 🔐 Helper for Authorization Header
+    /**
+     * Retrieves the authorization token from the request header.
+     *
+     * @param request the incoming HTTP request
+     * @return the value of the "authorization" header
+     */
     private String getAuthToken(Request request) {
         return request.headers("authorization");
     }
 
-    // ⚠️ Exception Handler
+    /**
+     * Handles exceptions thrown during request processing.
+     *
+     * @param e        the exception
+     * @param request  the HTTP request
+     * @param response the HTTP response
+     */
     private void exceptionHandler(ResponseException e, Request request, Response response) {
         response.status(e.getStatusCode());
         response.body(gson.toJson(new ErrorMessage(e.getMessage())));
     }
 
-    // 🧾 Handlers
+    // 🧾 Route Handlers
+
+    /**
+     * Handles user registration.
+     */
     private Object registrationHandler(Request request, Response response) throws ResponseException {
         response.type("application/json");
         var user = gson.fromJson(request.body(), RegistrationRequest.class);
@@ -81,6 +120,9 @@ public class Server {
         return gson.toJson(authData);
     }
 
+    /**
+     * Handles user login.
+     */
     private Object loginUser(Request request, Response response) throws ResponseException {
         response.type("application/json");
         var user = gson.fromJson(request.body(), LoginRequest.class);
@@ -89,6 +131,9 @@ public class Server {
         return gson.toJson(authData);
     }
 
+    /**
+     * Handles user logout.
+     */
     private Object logoutUser(Request request, Response response) throws ResponseException {
         response.type("application/json");
         var authToken = new LogoutRequest(getAuthToken(request));
@@ -97,6 +142,9 @@ public class Server {
         return "";
     }
 
+    /**
+     * Retrieves the list of available games.
+     */
     private Object getGames(Request request, Response response) throws ResponseException {
         authService.authenticate(getAuthToken(request));
         Collection<GameResponseData> allGames = listService.getGames();
@@ -104,6 +152,9 @@ public class Server {
         return gson.toJson(new ListGamesResponse(allGames));
     }
 
+    /**
+     * Handles joining a game.
+     */
     private Object joinGame(Request request, Response response) throws ResponseException {
         String authToken = getAuthToken(request);
         authService.authenticate(authToken);
@@ -114,6 +165,9 @@ public class Server {
         return "";
     }
 
+    /**
+     * Handles game creation.
+     */
     private Object createGame(Request request, Response response) throws ResponseException {
         authService.authenticate(getAuthToken(request));
         var newGame = gson.fromJson(request.body(), CreateGameRequest.class);
@@ -122,6 +176,9 @@ public class Server {
         return gson.toJson(gameID);
     }
 
+    /**
+     * Clears all data in the application (users, games, auth tokens).
+     */
     private Object clearApp(Request request, Response response) {
         clearService.clearDatabase();
         response.status(200);
