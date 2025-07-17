@@ -10,7 +10,7 @@ import exception.ResponseException;
 public class ListServiceTest {
     static final MemoryGameDAO GAME_DAO = new MemoryGameDAO();
     static final ListService SERVICE = new ListService(GAME_DAO);
-    static final GameService GAME_Service = new GameService(GAME_DAO);
+    static final GameService GAME_SERVICE = new GameService(GAME_DAO);
 
     @BeforeEach
     void clear() {
@@ -24,9 +24,9 @@ public class ListServiceTest {
 
     @Test
     void testGetGamesNonEmpty() throws ResponseException {
-        GAME_Service.createGame(new CreateGameRequest("game1", "WHITE"));
-        GAME_Service.createGame(new CreateGameRequest("game2", "BLACK"));
-        GAME_Service.createGame(new CreateGameRequest("game3", "WHITE"));
+        GAME_SERVICE.createGame(new CreateGameRequest("game1", "WHITE"));
+        GAME_SERVICE.createGame(new CreateGameRequest("game2", "BLACK"));
+        GAME_SERVICE.createGame(new CreateGameRequest("game3", "WHITE"));
 
         Assertions.assertEquals(3, SERVICE.getGames().size());
     }

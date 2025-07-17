@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 public class JoinServiceTest {
     static final MemoryGameDAO GAME_DAO = new MemoryGameDAO();
     static final JoinService SERVICE = new JoinService(GAME_DAO);
-    static final GameService GAME_Service = new GameService(GAME_DAO);
+    static final GameService GAME_SERVICE = new GameService(GAME_DAO);
 
     @BeforeEach
     void clear() {
@@ -22,7 +22,7 @@ public class JoinServiceTest {
 
     @Test
     void testJoinGameBad() throws ResponseException {
-        GameID gameID = GAME_Service.createGame(new CreateGameRequest("testGame", "WHITE"));
+        GameID gameID = GAME_SERVICE.createGame(new CreateGameRequest("testGame", "WHITE"));
 
         AuthData authData = new AuthData("testUser", "12345");
 
@@ -32,7 +32,7 @@ public class JoinServiceTest {
 
     @Test
     void testJoinGameGood() throws ResponseException {
-        GameID gameID = GAME_Service.createGame(new CreateGameRequest("testGame", "WHITE"));
+        GameID gameID = GAME_SERVICE.createGame(new CreateGameRequest("testGame", "WHITE"));
         JoinGameRequest req = new JoinGameRequest("WHITE", gameID.gameID());
 
         AuthData authData = new AuthData("testUser", "12345");
