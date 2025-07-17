@@ -1,7 +1,5 @@
-package phase3Tests;
+package Service;
 
-import Service.GameService;
-import Service.ListService;
 import dataAccess.memory.MemoryGameDAO;
 import handlers.CreateGameRequest;
 import org.junit.jupiter.api.Assertions;

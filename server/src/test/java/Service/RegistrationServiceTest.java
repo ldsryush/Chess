@@ -1,6 +1,5 @@
-package phase3Tests;
+package Service;
 
-import Service.RegistrationService;
 import dataAccess.AuthDAO;
 import dataAccess.UserDAO;
 import dataAccess.memory.MemoryAuthDAO;

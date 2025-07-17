@@ -1,6 +1,5 @@
-package phase3Tests;
+package Service;
 
-import Service.AuthenticationService;
 import dataAccess.memory.MemoryAuthDAO;
 import exception.ResponseException;
 import model.AuthData;

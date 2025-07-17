@@ -1,7 +1,5 @@
-package phase3Tests;
+package Service;
 
-import Service.GameService;
-import Service.JoinService;
 import dataAccess.memory.MemoryGameDAO;
 import exception.ResponseException;
 import handlers.CreateGameRequest;

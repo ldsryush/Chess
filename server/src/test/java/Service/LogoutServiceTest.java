@@ -1,6 +1,5 @@
-package phase3Tests;
+package Service;
 
-import Service.LogoutService;
 import dataAccess.memory.MemoryAuthDAO;
 import exception.ResponseException;
 import handlers.LogoutRequest;
