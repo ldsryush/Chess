@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Assertions;
 
 public class AuthenticationServiceTest {
     static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
-    static final AuthenticationService service = new AuthenticationService(AUTH_DAO);
+    static final AuthenticationService SERVICE = new AuthenticationService(AUTH_DAO);
 
     @BeforeEach
     void clear() {
@@ -24,8 +24,8 @@ public class AuthenticationServiceTest {
 
         AuthData authData = AUTH_DAO.createAuth(userData);
 
-        Assertions.assertThrows(ResponseException.class, () -> service.authenticate("fakeAuth"));
-        Assertions.assertTrue(service.authenticate(authData.authToken()));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.authenticate("fakeAuth"));
+        Assertions.assertTrue(SERVICE.authenticate(authData.authToken()));
     }
 
     @Test
@@ -34,8 +34,8 @@ public class AuthenticationServiceTest {
 
         AuthData authData = AUTH_DAO.createAuth(userData);
 
-        Assertions.assertEquals(authData, service.getAuthData(authData.authToken()));
-        Assertions.assertNotEquals(authData, service.getAuthData("fake auth"));
+        Assertions.assertEquals(authData, SERVICE.getAuthData(authData.authToken()));
+        Assertions.assertNotEquals(authData, SERVICE.getAuthData("fake auth"));
     }
 
 }
