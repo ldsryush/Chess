@@ -296,34 +296,46 @@ public class ChessGame {
     }
 
     public boolean isInCheck(TeamColor teamColor) {
-        ChessPosition kingPos = null;
+        ChessPiece piece;
+        ChessPosition kingPosition = null;
+
+        // Find the king's position
         for (int row = 1; row <= 8; row++) {
             for (int col = 1; col <= 8; col++) {
-                ChessPosition pos = new ChessPosition(row, col);
-                ChessPiece p = board.getPiece(pos);
-                if (p != null
-                        && p.getTeamColor() == teamColor
-                        && p.getPieceType() == ChessPiece.PieceType.KING) {
-                    kingPos = pos;
+                ChessPosition currPosition = new ChessPosition(row, col);
+                piece = this.board.getPiece(currPosition);
+                if (piece != null &&
+                        piece.getTeamColor() == teamColor &&
+                        piece.getPieceType() == ChessPiece.PieceType.KING) {
+                    kingPosition = currPosition;
                     break;
                 }
             }
+            if (kingPosition != null) {
+                break;
+            }
         }
+
         for (int row = 1; row <= 8; row++) {
             for (int col = 1; col <= 8; col++) {
-                ChessPosition pos = new ChessPosition(row, col);
-                ChessPiece p = board.getPiece(pos);
-                if (p != null && p.getTeamColor() != teamColor) {
-                    for (ChessMove m : p.pieceMoves(board, pos)) {
-                        if (m.getEndPosition().equals(kingPos)) {
-                            return true;
-                        }
+                ChessPosition currPosition = new ChessPosition(row, col);
+                piece = this.board.getPiece(currPosition);
+
+                if (piece == null || piece.getTeamColor() == teamColor) {
+                    continue;
+                }
+
+                for (ChessMove move : piece.pieceMoves(this.board, currPosition)) {
+                    if (move.getEndPosition().equals(kingPosition)) {
+                        return true;
                     }
                 }
             }
         }
+
         return false;
     }
+
 
     private boolean hasAnyLegalMove(TeamColor teamColor) {
         for (int row = 1; row <= 8; row++) {
