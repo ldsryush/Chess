@@ -1,4 +1,4 @@
-package dataAccess;
+package dataaccess;
 
 /**
  * Custom exception for errors related to data access operations.

@@ -1,8 +1,8 @@
-package dataAccess;
+package dataaccess;
 
-import dataAccess.memory.MemoryAuthDAO;
-import dataAccess.memory.MemoryGameDAO;
-import dataAccess.memory.MemoryUserDAO;
+import dataaccess.memory.MemoryAuthDAO;
+import dataaccess.memory.MemoryGameDAO;
+import dataaccess.memory.MemoryUserDAO;
 
 /**
  * Centralized access point for data access objects like DAOs.

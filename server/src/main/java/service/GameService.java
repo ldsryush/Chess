@@ -1,7 +1,7 @@
-package Service;
+package service;
 
 import chess.ChessGame;
-import dataAccess.GameDAO;
+import dataaccess.GameDAO;
 import exception.ResponseException;
 import handlers.CreateGameRequest;
 import model.GameData;

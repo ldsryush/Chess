@@ -1,13 +1,12 @@
 package service;
 
-import dataAccess.memory.MemoryAuthDAO;
+import dataaccess.memory.MemoryAuthDAO;
 import exception.ResponseException;
 import model.AuthData;
 import model.UserData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
-import Service.AuthenticationService;
 
 public class AuthenticationServiceTest {
     static final MemoryAuthDAO authDAO = new MemoryAuthDAO();

@@ -1,8 +1,8 @@
-package Service;
+package service;
 
-import dataAccess.AuthDAO;
-import dataAccess.GameDAO;
-import dataAccess.UserDAO;
+import dataaccess.AuthDAO;
+import dataaccess.GameDAO;
+import dataaccess.UserDAO;
 
 /**
  * Service responsible for clearing all data from the application.

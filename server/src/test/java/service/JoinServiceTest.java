@@ -1,6 +1,6 @@
 package service;
 
-import dataAccess.memory.MemoryGameDAO;
+import dataaccess.memory.MemoryGameDAO;
 import exception.ResponseException;
 import handlers.CreateGameRequest;
 import handlers.JoinGameRequest;
@@ -9,8 +9,6 @@ import model.GameID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import Service.JoinService;
-import Service.GameService;
 
 public class JoinServiceTest {
     static final MemoryGameDAO gameDAO = new MemoryGameDAO();

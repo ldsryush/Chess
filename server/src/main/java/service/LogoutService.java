@@ -1,6 +1,6 @@
-package Service;
+package service;
 
-import dataAccess.AuthDAO;
+import dataaccess.AuthDAO;
 import exception.ResponseException;
 import handlers.LogoutRequest;
 

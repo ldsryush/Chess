@@ -1,11 +1,11 @@
 package server;
 
 import com.google.gson.Gson;
-import dataAccess.*;
+import dataaccess.*;
 import exception.*;
 import handlers.*;
 import model.*;
-import Service.*;
+import service.*;
 import spark.*;
 
 import java.util.Collection;
@@ -14,7 +14,7 @@ import java.util.Collection;
  * Main server class that configures HTTP routes and handles incoming requests.
  */
 public class Server {
-    private static final Gson gson = new Gson();
+    private static final Gson GSON = new Gson();
 
     // Data Access Layer
     private final DataAccess dataAccess = new DataAccess(DataAccess.DataLocation.MEMORY);
@@ -89,25 +89,25 @@ public class Server {
 
     private void handleException(ResponseException e, Request request, Response response) {
         response.status(e.getStatusCode());
-        response.body(gson.toJson(new ErrorMessage(e.getMessage())));
+        response.body(GSON.toJson(new ErrorMessage(e.getMessage())));
     }
 
     // Route Handlers
 
     private Object handleUserRegistration(Request request, Response response) throws ResponseException {
         response.type("application/json");
-        var registrationRequest = gson.fromJson(request.body(), RegistrationRequest.class);
+        var registrationRequest = GSON.fromJson(request.body(), RegistrationRequest.class);
         AuthData authData = registrationService.registerUser(registrationRequest);
         response.status(200);
-        return gson.toJson(authData);
+        return GSON.toJson(authData);
     }
 
     private Object handleUserLogin(Request request, Response response) throws ResponseException {
         response.type("application/json");
-        var loginRequest = gson.fromJson(request.body(), LoginRequest.class);
+        var loginRequest = GSON.fromJson(request.body(), LoginRequest.class);
         AuthData authData = loginService.login(loginRequest);
         response.status(200);
-        return gson.toJson(authData);
+        return GSON.toJson(authData);
     }
 
     private Object handleUserLogout(Request request, Response response) throws ResponseException {
@@ -122,14 +122,14 @@ public class Server {
         authService.authenticate(extractAuthToken(request));
         Collection<GameResponseData> games = listService.getGames();
         response.status(200);
-        return gson.toJson(new ListGamesResponse(games));
+        return GSON.toJson(new ListGamesResponse(games));
     }
 
     private Object handleJoinGame(Request request, Response response) throws ResponseException {
         String authToken = extractAuthToken(request);
         authService.authenticate(authToken);
         AuthData authData = authService.getAuthData(authToken);
-        var joinRequest = gson.fromJson(request.body(), JoinGameRequest.class);
+        var joinRequest = GSON.fromJson(request.body(), JoinGameRequest.class);
         joinService.joinGame(joinRequest, authData);
         response.status(200);
         return "";
@@ -137,10 +137,10 @@ public class Server {
 
     private Object handleCreateGame(Request request, Response response) throws ResponseException {
         authService.authenticate(extractAuthToken(request));
-        var createRequest = gson.fromJson(request.body(), CreateGameRequest.class);
+        var createRequest = GSON.fromJson(request.body(), CreateGameRequest.class);
         GameID gameID = gameService.createGame(createRequest);
         response.status(200);
-        return gson.toJson(gameID);
+        return GSON.toJson(gameID);
     }
 
     private Object handleClearDatabase(Request request, Response response) {

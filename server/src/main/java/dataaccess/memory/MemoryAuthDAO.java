@@ -1,6 +1,6 @@
-package dataAccess.memory;
+package dataaccess.memory;
 
-import dataAccess.AuthDAO;
+import dataaccess.AuthDAO;
 import model.AuthData;
 import model.UserData;
 
@@ -18,6 +18,7 @@ public class MemoryAuthDAO implements AuthDAO {
     /**
      * Clears all stored authentication tokens.
      */
+    @Override
     public void clear() {
         tokenStore.clear();
     }

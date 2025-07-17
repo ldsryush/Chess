@@ -1,6 +1,6 @@
-package Service;
+package service;
 
-import dataAccess.GameDAO;
+import dataaccess.GameDAO;
 import exception.ResponseException;
 import handlers.JoinGameRequest;
 import model.AuthData;

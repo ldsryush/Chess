@@ -1,6 +1,6 @@
-package Service;
+package service;
 
-import dataAccess.GameDAO;
+import dataaccess.GameDAO;
 import model.GameData;
 import model.GameResponseData;
 
