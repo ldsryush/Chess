@@ -5,9 +5,15 @@ import server.Server;
  * Entry point for the chess server application.
  */
 public class Main {
+    /**
+     * Initializes and starts the server on the specified port.
+     *
+     * @param args command-line arguments (not used)
+     */
+
     public static void main(String[] args) {
-        // Create and start the server on port 8080
-        Server server = new Server();
-        server.run(8080);
+        final int defaultPort = 8080;
+        Server chessServer = new Server();
+        chessServer.run(defaultPort);
     }
 }
