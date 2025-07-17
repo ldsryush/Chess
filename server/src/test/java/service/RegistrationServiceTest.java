@@ -11,14 +11,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class RegistrationServiceTest {
-    static final UserDAO userDAO = new MemoryUserDAO();
-    static final AuthDAO authDAO = new MemoryAuthDAO();
-    static final RegistrationService service = new RegistrationService(userDAO, authDAO);
+    static final UserDAO USER_DAO = new MemoryUserDAO();
+    static final AuthDAO AUTH_DAO = new MemoryAuthDAO();
+    static final RegistrationService SERVICE = new RegistrationService(USER_DAO, AUTH_DAO);
 
     @BeforeEach
     void clear() {
-        userDAO.clear();
-        authDAO.clear();
+        USER_DAO.clear();
+        AUTH_DAO.clear();
     }
 
     @Test
@@ -28,9 +28,9 @@ public class RegistrationServiceTest {
                 "realPassword",
                 "email@email.com");
 
-        Assertions.assertDoesNotThrow(() -> service.registerUser(realReq));
+        Assertions.assertDoesNotThrow(() -> SERVICE.registerUser(realReq));
 
-        Assertions.assertThrows(ResponseException.class, () -> service.registerUser(realReq));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.registerUser(realReq));
     }
 
     @Test
@@ -41,6 +41,6 @@ public class RegistrationServiceTest {
                 "badEmail"
         );
 
-        Assertions.assertThrows(ResponseException.class, () -> service.registerUser(badReq));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.registerUser(badReq));
     }
 }

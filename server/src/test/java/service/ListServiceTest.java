@@ -8,26 +8,26 @@ import org.junit.jupiter.api.Test;
 import exception.ResponseException;
 
 public class ListServiceTest {
-    static final MemoryGameDAO gameDAO = new MemoryGameDAO();
-    static final ListService service = new ListService(gameDAO);
-    static final GameService gameService = new GameService(gameDAO);
+    static final MemoryGameDAO GAME_DAO = new MemoryGameDAO();
+    static final ListService SERVICE = new ListService(GAME_DAO);
+    static final GameService GAME_Service = new GameService(GAME_DAO);
 
     @BeforeEach
     void clear() {
-        gameDAO.clear();
+        GAME_DAO.clear();
     }
 
     @Test
     void testGetGamesEmpty() {
-        Assertions.assertTrue(service.getGames().isEmpty());
+        Assertions.assertTrue(SERVICE.getGames().isEmpty());
     }
 
     @Test
     void testGetGamesNonEmpty() throws ResponseException {
-        gameService.createGame(new CreateGameRequest("game1", "WHITE"));
-        gameService.createGame(new CreateGameRequest("game2", "BLACK"));
-        gameService.createGame(new CreateGameRequest("game3", "WHITE"));
+        GAME_Service.createGame(new CreateGameRequest("game1", "WHITE"));
+        GAME_Service.createGame(new CreateGameRequest("game2", "BLACK"));
+        GAME_Service.createGame(new CreateGameRequest("game3", "WHITE"));
 
-        Assertions.assertEquals(3, service.getGames().size());
+        Assertions.assertEquals(3, SERVICE.getGames().size());
     }
 }

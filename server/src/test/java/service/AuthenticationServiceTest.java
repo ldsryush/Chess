@@ -9,12 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 public class AuthenticationServiceTest {
-    static final MemoryAuthDAO authDAO = new MemoryAuthDAO();
-    static final AuthenticationService service = new AuthenticationService(authDAO);
+    static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
+    static final AuthenticationService service = new AuthenticationService(AUTH_DAO);
 
     @BeforeEach
     void clear() {
-        authDAO.clear();
+        AUTH_DAO.clear();
     }
 
 
@@ -22,7 +22,7 @@ public class AuthenticationServiceTest {
     void testAuthenticate() throws ResponseException {
         UserData userData = new UserData("patrick", "12345", "test@email.com");
 
-        AuthData authData = authDAO.createAuth(userData);
+        AuthData authData = AUTH_DAO.createAuth(userData);
 
         Assertions.assertThrows(ResponseException.class, () -> service.authenticate("fakeAuth"));
         Assertions.assertTrue(service.authenticate(authData.authToken()));
@@ -32,7 +32,7 @@ public class AuthenticationServiceTest {
     void testGetAuthData() {
         UserData userData = new UserData("patrick", "12345", "test@email.com");
 
-        AuthData authData = authDAO.createAuth(userData);
+        AuthData authData = AUTH_DAO.createAuth(userData);
 
         Assertions.assertEquals(authData, service.getAuthData(authData.authToken()));
         Assertions.assertNotEquals(authData, service.getAuthData("fake auth"));

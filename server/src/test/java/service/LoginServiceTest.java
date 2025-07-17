@@ -11,19 +11,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class LoginServiceTest {
-    static final MemoryUserDAO userDAO = new MemoryUserDAO();
-    static final MemoryAuthDAO authDAO = new MemoryAuthDAO();
-    static final LoginService service = new LoginService(userDAO, authDAO);
+    static final MemoryUserDAO USER_DAO = new MemoryUserDAO();
+    static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
+    static final LoginService SERVICE = new LoginService(USER_DAO, AUTH_DAO);
 
     @BeforeEach
     void clear() {
-        userDAO.clear();
-        authDAO.clear();
+        USER_DAO.clear();
+        AUTH_DAO.clear();
     }
 
     @Test
     void testLoginUnauthorized() {
-        Assertions.assertThrows(ResponseException.class, () -> service.login(new LoginRequest("fakeName", "1234")));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.login(new LoginRequest("fakeName", "1234")));
     }
 
     @Test
@@ -32,9 +32,9 @@ public class LoginServiceTest {
 
         UserData userData = new UserData("realName", "realPassword", "realEmail@email.com");
 
-        userDAO.createUser(userData);
+        USER_DAO.createUser(userData);
 
-        Assertions.assertDoesNotThrow(() -> service.login(new LoginRequest(userData.username(), userData.password())));
-        Assertions.assertInstanceOf(AuthData.class, service.login(new LoginRequest(userData.username(), userData.password())));
+        Assertions.assertDoesNotThrow(() -> SERVICE.login(new LoginRequest(userData.username(), userData.password())));
+        Assertions.assertInstanceOf(AuthData.class, SERVICE.login(new LoginRequest(userData.username(), userData.password())));
     }
 }
