@@ -1,4 +1,4 @@
-package Service;
+package service;
 
 import dataAccess.memory.MemoryAuthDAO;
 import exception.ResponseException;
@@ -8,6 +8,7 @@ import model.UserData;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import Service.LogoutService;
 
 public class LogoutServiceTest {
     static final MemoryAuthDAO authDAO = new MemoryAuthDAO();

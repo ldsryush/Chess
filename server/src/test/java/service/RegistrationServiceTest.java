@@ -1,4 +1,4 @@
-package Service;
+package service;
 
 import dataAccess.AuthDAO;
 import dataAccess.UserDAO;
@@ -9,6 +9,7 @@ import handlers.RegistrationRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import Service.RegistrationService;
 
 public class RegistrationServiceTest {
     static final UserDAO userDAO = new MemoryUserDAO();

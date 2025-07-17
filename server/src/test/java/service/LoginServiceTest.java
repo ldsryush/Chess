@@ -1,4 +1,4 @@
-package Service;
+package service;
 
 import dataAccess.memory.MemoryAuthDAO;
 import dataAccess.memory.MemoryUserDAO;
@@ -9,6 +9,7 @@ import model.UserData;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import Service.LoginService;
 
 public class LoginServiceTest {
     static final MemoryUserDAO userDAO = new MemoryUserDAO();
