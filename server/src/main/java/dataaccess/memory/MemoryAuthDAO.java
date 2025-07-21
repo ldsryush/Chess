@@ -8,65 +8,62 @@ import java.util.HashMap;
 import java.util.UUID;
 
 /**
- * In-memory implementation of AuthDAO for managing authentication tokens.
+ * Implementation of AuthDAO, providing access to authorization data in memory
  */
 public class MemoryAuthDAO implements AuthDAO {
-
-    // Stores auth tokens mapped to their corresponding AuthData
-    private final HashMap<String, AuthData> tokenStore = new HashMap<>();
+    private final HashMap<String, AuthData> authTokens = new HashMap<>();
 
     /**
-     * Clears all stored authentication tokens.
+     * Clears all authTokens in memory
      */
-    @Override
     public void clear() {
-        tokenStore.clear();
+        authTokens.clear();
     }
 
     /**
-     * Creates a new authentication token for the given user.
-     *
-     * @param userData the user to authenticate
-     * @return the generated AuthData
+     * Creates new authorization data
+     * @param userData UserData object to associate with the AuthData
+     * @return AuthData object containing username and authToken
      */
     @Override
     public AuthData createAuth(UserData userData) {
-        String token = UUID.randomUUID().toString();
-        AuthData authData = new AuthData(userData.username(), token);
-        tokenStore.put(token, authData);
+        AuthData authData = new AuthData(userData.username(), UUID.randomUUID().toString());
+        authTokens.put(authData.authToken(), authData);
         return authData;
     }
 
     /**
-     * Checks if an authentication token exists.
-     *
-     * @param authToken the token to check
-     * @return true if the token exists, false otherwise
+     * Indicates whether a given authToken is associated with a particular AuthData object in memory
+     * @param authToken the authToken to compare against the list of AuthData objects
+     * @return boolean - true if valid, false if not
      */
     @Override
     public boolean authExists(String authToken) {
-        return tokenStore.containsKey(authToken);
+        return authTokens.containsKey(authToken);
     }
 
     /**
-     * Retrieves the AuthData associated with a token.
-     *
-     * @param authToken the token to retrieve
-     * @return the AuthData, or null if not found
+     * Gets the AuthData object associated with an authToken
+     * @param authToken the authToken string to compare against the database
+     * @return the AuthData object associated
      */
     @Override
     public AuthData getAuth(String authToken) {
-        return tokenStore.get(authToken);
+        return authTokens.get(authToken);
     }
 
     /**
-     * Deletes an authentication token.
-     *
-     * @param authToken the token to delete
-     * @return true if the token was deleted, false if it didn't exist
+     * Deletes an AuthData object from memory
+     * @param authToken the authToken to be removed
+     * @return true if successfully removed, false if not
      */
     @Override
     public boolean deleteAuth(String authToken) {
-        return tokenStore.remove(authToken) != null;
+        if (authTokens.containsKey(authToken)) {
+            authTokens.remove(authToken);
+            return true;
+        } else {
+            return false;
+        }
     }
 }

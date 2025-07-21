@@ -2,52 +2,46 @@ package dataaccess.memory;
 
 import dataaccess.UserDAO;
 import model.UserData;
+
 import java.util.HashMap;
 
 /**
- * In-memory implementation of UserDAO for managing user accounts.
+ * An implementation of the UserDAO to store UserData in memory
  */
 public class MemoryUserDAO implements UserDAO {
 
-    // Stores users mapped by their username
-    private final HashMap<String, UserData> userStore = new HashMap<>();
+    private  final HashMap<String, UserData> allUsers = new HashMap<>();
 
     /**
-     * Checks if a user already exists.
-     *
-     * @param userData the user to check
-     * @return true if the user exists, false otherwise
+     * Indicates whether the specified username exists
+     * @param userData UserData to check existence of
+     * @return true if the user exists, false if not
      */
-    @Override
     public boolean isUser(UserData userData) {
-        return userStore.containsKey(userData.username());
+        return allUsers.containsKey(userData.username());
     }
 
     /**
-     * Retrieves a user by username.
-     *
-     * @param username the username to look up
-     * @return the UserData, or null if not found
+     * Returns the user associated with a given username
+     * @param username String of the user requested
+     * @return the UserData object with that username
      */
-    @Override
     public UserData getUser(String username) {
-        return userStore.get(username);
+        return allUsers.get(username);
     }
 
     /**
-     * Creates a new user.
-     *
-     * @param userData the user to add
+     * Creates a new user by adding the UserData to the database
+     * @param userData UserData object of the data to be added
      */
-    @Override
     public void createUser(UserData userData) {
-        userStore.put(userData.username(), userData);
+        allUsers.put(userData.username(), userData);
     }
 
     /**
-     * Clears all stored users.
+     * Clears the entire user database
      */
     public void clear() {
-        userStore.clear();
+        allUsers.clear();
     }
 }

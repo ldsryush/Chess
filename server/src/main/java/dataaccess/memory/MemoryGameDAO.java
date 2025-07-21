@@ -7,60 +7,53 @@ import java.util.Collection;
 import java.util.HashMap;
 
 /**
- * In-memory implementation of GameDAO for managing game data.
+ * An implementation of GameDAO to store GameData objects in memory
  */
 public class MemoryGameDAO implements GameDAO {
-
-    // Stores games mapped by their unique game ID
-    private final HashMap<Integer, GameData> gameStore = new HashMap<>();
+    private final HashMap<Integer, GameData> gameList = new HashMap<>();
 
     /**
-     * Clears all stored games.
+     * Clears the entire GameDAO in memory
      */
     public void clear() {
-        gameStore.clear();
+        gameList.clear();
     }
 
     /**
-     * Adds a new game to the store.
-     *
-     * @param gameData the game to add
+     * Adds a new game into a HashMap with gameIDs as keys
+     * @param gameData GameData containing all necessary
      */
     @Override
     public void addGame(GameData gameData) {
-        int gameID = gameData.gameID();
-        gameStore.put(gameID, gameData);
+        var gameID = gameData.gameID();
+        gameList.put(gameID, gameData);
     }
 
     /**
-     * Retrieves a game by its ID.
-     *
-     * @param gameID the ID of the game
-     * @return the GameData, or null if not found
+     * Returns a game associated with a specified ID
+     * @param gameID the gameID of the game desired
+     * @return GameData object containing all the data on the game desired
      */
     @Override
     public GameData getGame(int gameID) {
-        return gameStore.get(gameID);
+        return gameList.get(gameID);
     }
 
     /**
-     * Lists all stored games.
-     *
-     * @return a collection of all GameData objects
+     * Lists all the games in memory
+     * @return Collection of GameData objects - all games in memory
      */
     @Override
     public Collection<GameData> listGames() {
-        return gameStore.values();
+        return gameList.values();
     }
 
     /**
-     * Updates an existing game.
-     *
-     * @param gameID   the ID of the game to update
-     * @param gameData the new game data
+     * Updates a specified game
+     * @param gameData GameData object containing the updated game
      */
     @Override
-    public void updateGame(Integer gameID, GameData gameData) {
-        gameStore.put(gameID, gameData);
+    public void updateGame(GameData gameData) {
+        gameList.put(gameData.gameID(), gameData);
     }
 }
