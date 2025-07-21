@@ -1,5 +1,7 @@
 package service;
 
+import service.AuthenticationService;
+import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryAuthDAO;
 import exception.ResponseException;
 import model.AuthData;
@@ -9,33 +11,37 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 public class AuthenticationServiceTest {
-    static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
-    static final AuthenticationService SERVICE = new AuthenticationService(AUTH_DAO);
+    static final MemoryAuthDAO authDAO = new MemoryAuthDAO();
+    static final AuthenticationService service = new AuthenticationService(authDAO);
 
     @BeforeEach
     void clear() {
-        AUTH_DAO.clear();
+        authDAO.clear();
     }
 
 
     @Test
-    void testAuthenticate() throws ResponseException {
+    void testAuthenticate() throws ResponseException, DataAccessException {
         UserData userData = new UserData("patrick", "12345", "test@email.com");
 
-        AuthData authData = AUTH_DAO.createAuth(userData);
+        AuthData authData = authDAO.createAuth(userData);
 
-        Assertions.assertThrows(ResponseException.class, () -> SERVICE.authenticate("fakeAuth"));
-        Assertions.assertTrue(SERVICE.authenticate(authData.authToken()));
+//        Negative test case
+        Assertions.assertThrows(ResponseException.class, () -> service.authenticate("fakeAuth"));
+//        Positive test case
+        Assertions.assertTrue(service.authenticate(authData.authToken()));
     }
 
     @Test
-    void testGetAuthData() {
+    void testGetAuthData() throws DataAccessException {
         UserData userData = new UserData("patrick", "12345", "test@email.com");
 
-        AuthData authData = AUTH_DAO.createAuth(userData);
+        AuthData authData = authDAO.createAuth(userData);
 
-        Assertions.assertEquals(authData, SERVICE.getAuthData(authData.authToken()));
-        Assertions.assertNotEquals(authData, SERVICE.getAuthData("fake auth"));
+//        Positive test case
+        Assertions.assertEquals(authData, service.getAuthData(authData.authToken()));
+//        Negative test case
+        Assertions.assertNotEquals(authData, service.getAuthData("fake auth"));
     }
 
 }

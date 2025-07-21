@@ -1,5 +1,7 @@
 package service;
 
+import service.LoginService;
+import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryAuthDAO;
 import dataaccess.memory.MemoryUserDAO;
 import exception.ResponseException;
@@ -11,30 +13,32 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class LoginServiceTest {
-    static final MemoryUserDAO USER_DAO = new MemoryUserDAO();
-    static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
-    static final LoginService SERVICE = new LoginService(USER_DAO, AUTH_DAO);
+    static final MemoryUserDAO userDAO = new MemoryUserDAO();
+    static final MemoryAuthDAO authDAO = new MemoryAuthDAO();
+    static final LoginService service = new LoginService(userDAO, authDAO);
 
     @BeforeEach
     void clear() {
-        USER_DAO.clear();
-        AUTH_DAO.clear();
+        userDAO.clear();
+        authDAO.clear();
     }
 
     @Test
     void testLoginUnauthorized() {
-        Assertions.assertThrows(ResponseException.class, () -> SERVICE.login(new LoginRequest("fakeName", "1234")));
+//        Test that a nonexistent user is unauthorized
+        Assertions.assertThrows(ResponseException.class, () -> service.login(new LoginRequest("fakeName", "1234")));
     }
 
     @Test
-    void testLoginValid() throws ResponseException {
+    void testLoginValid() throws ResponseException, DataAccessException {
 
 
         UserData userData = new UserData("realName", "realPassword", "realEmail@email.com");
 
-        USER_DAO.createUser(userData);
+        userDAO.createUser(userData);
 
-        Assertions.assertDoesNotThrow(() -> SERVICE.login(new LoginRequest(userData.username(), userData.password())));
-        Assertions.assertInstanceOf(AuthData.class, SERVICE.login(new LoginRequest(userData.username(), userData.password())));
+//        Test that a real user can log in
+        Assertions.assertDoesNotThrow(() -> service.login(new LoginRequest(userData.username(), userData.password())));
+        Assertions.assertInstanceOf(AuthData.class, service.login(new LoginRequest(userData.username(), userData.password())));
     }
 }

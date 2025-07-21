@@ -1,33 +1,41 @@
 package service;
 
+import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryGameDAO;
 import handlers.CreateGameRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import exception.ResponseException;
 
 public class ListServiceTest {
-    static final MemoryGameDAO GAME_DAO = new MemoryGameDAO();
-    static final ListService SERVICE = new ListService(GAME_DAO);
-    static final GameService GAME_SERVICE = new GameService(GAME_DAO);
+    static final MemoryGameDAO gameDAO = new MemoryGameDAO();
+    static final ListService service = new ListService(gameDAO);
+    static final GameService gameService = new GameService(gameDAO);
 
     @BeforeEach
-    void clear() {
-        GAME_DAO.clear();
+    void clear() throws DataAccessException {
+        gameDAO.clear();
     }
 
     @Test
     void testGetGamesEmpty() {
-        Assertions.assertTrue(SERVICE.getGames().isEmpty());
+        try {
+            Assertions.assertTrue(service.getGames().isEmpty());
+        } catch (DataAccessException e) {
+            Assertions.fail("Data access error during empty list check");
+        }
     }
 
     @Test
-    void testGetGamesNonEmpty() throws ResponseException {
-        GAME_SERVICE.createGame(new CreateGameRequest("game1", "WHITE"));
-        GAME_SERVICE.createGame(new CreateGameRequest("game2", "BLACK"));
-        GAME_SERVICE.createGame(new CreateGameRequest("game3", "WHITE"));
+    void testGetGamesNonEmpty() {
+        try {
+            gameService.createGame(new CreateGameRequest("game1", "auth1"));
+            gameService.createGame(new CreateGameRequest("game2", "auth2"));
+            gameService.createGame(new CreateGameRequest("game3", "auth3"));
 
-        Assertions.assertEquals(3, SERVICE.getGames().size());
+            Assertions.assertEquals(3, service.getGames().size());
+        } catch (DataAccessException e) {
+            Assertions.fail("Data access error during non-empty list check");
+        }
     }
 }
