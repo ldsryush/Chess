@@ -15,14 +15,15 @@ import org.junit.jupiter.api.Test;
 public class LogoutServiceTest {
     static final AuthDAO authDAO;
     static {
-        AuthDAO authDAO1;
+        AuthDAO temp;
         try {
-            authDAO1 = new MySQLAuthDAO();
-        } catch (ResponseException ignore) {
-            authDAO1 = new MemoryAuthDAO();
+            temp = new MySQLAuthDAO();
+        } catch (Exception e) {
+            temp = new MemoryAuthDAO();
         }
-        authDAO = authDAO1;
+        authDAO = temp;
     }
+
     static final LogoutService service = new LogoutService(authDAO);
 
     @BeforeEach
@@ -32,23 +33,18 @@ public class LogoutServiceTest {
 
     @Test
     void testLogoutUserInvalid() {
-//        Test that a user that is not logged in cannot log out
-        Assertions.assertThrows(ResponseException.class, () -> service.logoutUser(new LogoutRequest("1234")));
+        LogoutRequest request = new LogoutRequest("invalid-token");
+        Assertions.assertThrows(ResponseException.class, () -> service.logoutUser(request));
     }
 
     @Test
-    void testLogoutUserValid() {
-        UserData userData = new UserData("realUser", "realPassword", "email@email.com");
+    void testLogoutUserValid() throws ResponseException, DataAccessException {
+        UserData user = new UserData("realUser", "realPassword", "email@email.com");
+        AuthData authData = authDAO.createAuth(user);
+        LogoutRequest request = new LogoutRequest(authData.authToken());
 
-        AuthData authData = null;
-        try {
-            authData = authDAO.createAuth(userData);
-        } catch (DataAccessException e) {
-            Assertions.fail();
-        }
+        Assertions.assertDoesNotThrow(() -> service.logoutUser(request));
 
-//        Test that a user currently logged in actually can log in
-        AuthData finalAuthData = authData;
-        Assertions.assertDoesNotThrow(() -> service.logoutUser(new LogoutRequest(finalAuthData.authToken())));
+        Assertions.assertFalse(authDAO.authExists(authData.authToken()));
     }
 }

@@ -1,6 +1,5 @@
 package service;
 
-import service.LoginService;
 import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryAuthDAO;
 import dataaccess.memory.MemoryUserDAO;
@@ -11,6 +10,7 @@ import model.UserData;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import at.favre.lib.crypto.bcrypt.BCrypt;
 
 public class LoginServiceTest {
     static final MemoryUserDAO userDAO = new MemoryUserDAO();
@@ -18,27 +18,31 @@ public class LoginServiceTest {
     static final LoginService service = new LoginService(userDAO, authDAO);
 
     @BeforeEach
-    void clear() {
+    void clear() throws DataAccessException {
         userDAO.clear();
         authDAO.clear();
     }
 
     @Test
     void testLoginUnauthorized() {
-//        Test that a nonexistent user is unauthorized
-        Assertions.assertThrows(ResponseException.class, () -> service.login(new LoginRequest("fakeName", "1234")));
+        Assertions.assertThrows(ResponseException.class, () ->
+                service.login(new LoginRequest("fakeName", "1234")));
     }
 
     @Test
     void testLoginValid() throws ResponseException, DataAccessException {
+        String rawPassword = "realPassword";
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, rawPassword.toCharArray());
 
-
-        UserData userData = new UserData("realName", "realPassword", "realEmail@email.com");
-
+        UserData userData = new UserData("realName", hashedPassword, "realEmail@email.com");
         userDAO.createUser(userData);
 
-//        Test that a real user can log in
-        Assertions.assertDoesNotThrow(() -> service.login(new LoginRequest(userData.username(), userData.password())));
-        Assertions.assertInstanceOf(AuthData.class, service.login(new LoginRequest(userData.username(), userData.password())));
+        LoginRequest request = new LoginRequest(userData.username(), rawPassword);
+
+        Assertions.assertDoesNotThrow(() -> service.login(request));
+
+        AuthData authData = service.login(request);
+        Assertions.assertNotNull(authData);
+        Assertions.assertEquals(userData.username(), authData.username());
     }
 }
