@@ -1,5 +1,6 @@
 package service;
 
+import dataaccess.DataAccessException;
 import dataaccess.GameDAO;
 import model.GameData;
 import model.GameResponseData;
@@ -8,35 +9,30 @@ import java.util.Collection;
 import java.util.HashSet;
 
 /**
- * Service responsible for retrieving a list of available games.
+ * Handles requests to list all the games in the database
  */
 public class ListService {
     private final GameDAO gameDAO;
 
     /**
-     * Constructs a ListService with the given GameDAO.
-     *
-     * @param gameDAO the data access object for retrieving game data
+     * Receives a GameDAO object to provide access to the game data
+     * @param gameDAO GameDAO object providing access to the game data
      */
     public ListService(GameDAO gameDAO) {
         this.gameDAO = gameDAO;
     }
 
     /**
-     * Retrieves a collection of GameResponseData objects representing all available games.
-     *
-     * @return a collection of simplified game data for client responses
+     * Returns a HashSet of all the GameResponseData
+     * Contains only the gameID, player usernames, and gameName (not the ChessGame object)
+     * @return Collection of GameResponseData containing data for all the games
      */
-    public Collection<GameResponseData> getGames() {
-        // Retrieve all stored games
+    public Collection<GameResponseData> getGames() throws DataAccessException {
         Collection<GameData> allGames = gameDAO.listGames();
-
-        // Convert each GameData into a GameResponseData
         Collection<GameResponseData> gameResponseData = new HashSet<>();
         for (var game : allGames) {
             gameResponseData.add(new GameResponseData(
-                    game.gameID(),
-                    game.whiteUsername(),
+                    game.gameID(), game.whiteUsername(),
                     game.blackUsername(),
                     game.gameName()));
         }

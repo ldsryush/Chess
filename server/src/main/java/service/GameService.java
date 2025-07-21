@@ -1,8 +1,8 @@
 package service;
 
 import chess.ChessGame;
+import dataaccess.DataAccessException;
 import dataaccess.GameDAO;
-import exception.ResponseException;
 import handlers.CreateGameRequest;
 import model.GameData;
 import model.GameID;
@@ -10,63 +10,43 @@ import model.GameID;
 import java.util.Random;
 
 /**
- * Service responsible for creating new chess games.
+ * Handles requests to create new games
  */
 public class GameService {
     private final GameDAO gameDAO;
 
     /**
-     * Constructs a GameService with the given GameDAO.
-     *
-     * @param gameDAO the data access object for storing game data
+     * Receives a GameDAO object to provide access to the game data
+     * @param gameDAO GameDAO object providing access to the game data
      */
     public GameService(GameDAO gameDAO) {
         this.gameDAO = gameDAO;
     }
 
     /**
-     * Creates a new game using the provided request data.
-     *
-     * @param newGame the request containing the desired game name
-     * @return a GameID representing the newly created game
-     * @throws ResponseException if the game name is invalid
+     * Creates a new game using the data stored in a CreateGameRequest object.
+     * Generates a random number to use as the gameID
+     * Initializes a new ChessGame and new GameData object to represent the game
+     * @param newGame an object containing the name of the new game
+     * @return GameID object containing the gameID for the new game
      */
-    public GameID createGame(CreateGameRequest newGame) throws ResponseException {
-        // Validate game name
-        if (isInvalid(newGame.gameName())) {
-            throw new ResponseException(400, "error: bad request");
-        }
-
-        // Generate a random game ID
+    public GameID createGame(CreateGameRequest newGame) throws DataAccessException {
+//        Generate the game ID
         Random random = new Random();
         int gameID = random.nextInt(1000000);
 
-        // Create a new ChessGame instance
+//        Initialize a new game
         ChessGame game = new ChessGame();
-
-        // Wrap game data into a GameData object
         GameData gameData = new GameData(
                 gameID,
-                null,               // white player
-                null,               // black player
-                newGame.gameName(), // game name
-                game                // actual game instance
+                null,
+                null,
+                newGame.gameName(),
+                game
         );
-
-        // Store the game in the DAO
+//        Add the game to the database
         this.gameDAO.addGame(gameData);
 
-        // Return the game ID
         return new GameID(gameID);
-    }
-
-    /**
-     * Checks if a string value is null or blank.
-     *
-     * @param value the string to validate
-     * @return true if the value is invalid, false otherwise
-     */
-    private boolean isInvalid(String value) {
-        return value == null || value.isBlank();
     }
 }

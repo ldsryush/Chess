@@ -1,65 +1,53 @@
 package service;
 
 import dataaccess.AuthDAO;
+import dataaccess.DataAccessException;
 import dataaccess.UserDAO;
 import exception.ResponseException;
 import handlers.LoginRequest;
 import model.AuthData;
 import model.UserData;
-
-import java.util.Objects;
+import at.favre.lib.crypto.bcrypt.BCrypt; // ✅ added bcrypt import
 
 /**
- * Service responsible for handling user login requests.
+ * Handles requests for a user to log in
  */
 public class LoginService {
 
     private final UserDAO userDAO;
     private final AuthDAO authDAO;
 
-    /**
-     * Constructs a LoginService with the given UserDAO and AuthDAO.
-     *
-     * @param userDAO the data access object for user data
-     * @param authDAO the data access object for authentication tokens
-     */
     public LoginService(UserDAO userDAO, AuthDAO authDAO) {
         this.userDAO = userDAO;
         this.authDAO = authDAO;
     }
 
     /**
-     * Authenticates a user based on the provided login request.
-     *
-     * @param loginRequest the login request containing username and password
-     * @return an AuthData object representing the authenticated session
-     * @throws ResponseException if the request is invalid or credentials are incorrect
+     * Logs in a user using the data from the LoginRequest,
+     * @param loginRequest LoginRequest object containing username and password
+     * @return AuthData object containing the username and authToken created upon login
+     * @throws ResponseException if password is incorrect or username is unknown
      */
-    public AuthData login(LoginRequest loginRequest) throws ResponseException {
-        // Validate input
-        if (isInvalid(loginRequest.username()) || isInvalid(loginRequest.password())) {
-            throw new ResponseException(400, "error: bad request");
-        }
-
-        // Retrieve user data
+    public AuthData login(LoginRequest loginRequest) throws ResponseException, DataAccessException {
         UserData userData = this.userDAO.getUser(loginRequest.username());
 
-        // Verify credentials
-        if (userData == null || !Objects.equals(userData.password(), loginRequest.password())) {
+        if (userData == null) {
             throw new ResponseException(401, "error: unauthorized");
         }
 
-        // Create and return authentication token
-        return this.authDAO.createAuth(userData);
-    }
+        // ✅ Remove any previous auth token
+        authDAO.deleteAuth(userData.username());
 
-    /**
-     * Checks if a string value is null or blank.
-     *
-     * @param value the string to validate
-     * @return true if the value is invalid, false otherwise
-     */
-    private boolean isInvalid(String value) {
-        return value == null || value.isBlank();
+        // ✅ Verify bcrypt hashed password
+        BCrypt.Result result = BCrypt.verifyer().verify(
+                loginRequest.password().toCharArray(),
+                userData.password()
+        );
+
+        if (result.verified) {
+            return authDAO.createAuth(userData);
+        } else {
+            throw new ResponseException(401, "error: unauthorized");
+        }
     }
 }

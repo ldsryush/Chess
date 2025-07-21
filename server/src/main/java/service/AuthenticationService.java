@@ -1,32 +1,31 @@
 package service;
 
 import dataaccess.AuthDAO;
+import dataaccess.DataAccessException;
 import exception.ResponseException;
 import model.AuthData;
 
 /**
- * Service responsible for validating authentication tokens and retrieving associated user data.
+ * Class AuthenticationService
+ * Handles requests to authenticate a user before allowing the user to modify the game
  */
 public class AuthenticationService {
     private final AuthDAO authDAO;
 
     /**
-     * Constructs an AuthenticationService with the given AuthDAO.
-     *
-     * @param authDAO the data access object for authentication tokens
+     * Constructor, accepts an AuthDAO to use to access the authorization database
+     * @param authDAO AuthDAO object providing access to the authorization database
      */
     public AuthenticationService(AuthDAO authDAO) {
         this.authDAO = authDAO;
     }
 
     /**
-     * Validates whether the given authentication token exists.
-     *
-     * @param authToken the token to validate
-     * @return true if the token is valid
-     * @throws ResponseException if the token is missing or invalid
+     * Authenticates a token, throwing an exception if the authorization token is invalid
+     * @param authToken a String of the authToken provided in the HTTP header
+     * @throws ResponseException Indicating that the authToken is not valid
      */
-    public boolean authenticate(String authToken) throws ResponseException {
+    public boolean authenticate(String authToken) throws ResponseException, DataAccessException {
         if (!this.authDAO.authExists(authToken)) {
             throw new ResponseException(401, "error: unauthorized");
         } else {
@@ -35,12 +34,11 @@ public class AuthenticationService {
     }
 
     /**
-     * Retrieves the AuthData associated with a given token.
-     *
-     * @param authToken the token to look up
-     * @return the AuthData object, or null if not found
+     * Returns the AuthData object associated with a given authToken
+     * @param authToken the String of an authToken
+     * @return AuthData object associated
      */
-    public AuthData getAuthData(String authToken) {
+    public AuthData getAuthData(String authToken) throws DataAccessException {
         return authDAO.getAuth(authToken);
     }
 }

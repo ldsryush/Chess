@@ -1,5 +1,6 @@
 package service;
 
+import dataaccess.DataAccessException;
 import dataaccess.GameDAO;
 import exception.ResponseException;
 import handlers.JoinGameRequest;
@@ -9,44 +10,37 @@ import model.GameData;
 import java.util.Objects;
 
 /**
- * Service responsible for handling requests to join an existing game.
+ * Handles requests to join a game
  */
 public class JoinService {
     private final GameDAO gameDAO;
 
     /**
-     * Constructs a JoinService with the given GameDAO.
-     *
-     * @param gameDAO the data access object for retrieving and updating games
+     * Receives a GameDAO object to provide access to the game data
+     * @param gameDAO GameDAO object providing access to the game data
      */
     public JoinService(GameDAO gameDAO) {
         this.gameDAO = gameDAO;
     }
 
     /**
-     * Processes a request to join a game as either WHITE or BLACK.
-     *
-     * @param request   the join game request containing game ID and desired color
-     * @param authData  the authenticated user's data
-     * @throws ResponseException if the request is invalid or the color is already taken
+     * Joins a game using the data from the request to join the game
+     * as well as the username found from authenticating the user.
+     * @param request JoinGameRequest object, containing playerColor and gameID
+     * @param authData AuthData object used to get the player's username
+     * @throws ResponseException if (a) game doesn't exist, (b) color is already taken, or (c) color is invalid
      */
-    public void joinGame(JoinGameRequest request, AuthData authData) throws ResponseException {
-        // Validate request parameters
-        if (request.gameID() == null || request.playerColor() == null) {
-            throw new ResponseException(400, "error: bad request");
-        }
-
-        // Retrieve the game from the DAO
+    public void joinGame(JoinGameRequest request, AuthData authData) throws ResponseException, DataAccessException {
+//        Ensures that the game with the requested ID exists
         GameData game = gameDAO.getGame(request.gameID());
         if (game == null) {
             throw new ResponseException(400, "error: bad request");
         }
 
-        // Extract current player assignments
+//        Assigns the new usernames, making sure they haven't been taken already (also ensures valid color)
         String whiteUsername = game.whiteUsername();
         String blackUsername = game.blackUsername();
 
-        // Assign user to requested color if available
         if (Objects.equals(request.playerColor(), "WHITE")) {
             if (whiteUsername != null) {
                 throw new ResponseException(403, "error: already taken");
@@ -57,12 +51,10 @@ public class JoinService {
                 throw new ResponseException(403, "error: already taken");
             }
             blackUsername = authData.username();
-        } else {
-            // Invalid color value
+        } else if (request.playerColor() != null) {
             throw new ResponseException(400, "error: bad request");
         }
 
-        // Create updated GameData with new player assignment
         GameData newGame = new GameData(
                 request.gameID(),
                 whiteUsername,
@@ -70,7 +62,7 @@ public class JoinService {
                 game.gameName(),
                 game.game());
 
-        // Persist the updated game
-        gameDAO.updateGame(request.gameID(), newGame);
+        gameDAO.updateGame(newGame);
     }
+
 }

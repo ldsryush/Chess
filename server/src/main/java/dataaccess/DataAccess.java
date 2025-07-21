@@ -1,62 +1,52 @@
 package dataaccess;
 
-import dataaccess.memory.MemoryAuthDAO;
-import dataaccess.memory.MemoryGameDAO;
-import dataaccess.memory.MemoryUserDAO;
+import exception.ResponseException;
 
-/**
- * Centralized access point for data access objects like DAOs.
- * Supports multiple storage backends.
- */
+import java.sql.SQLException;
+
 public class DataAccess {
+    private static final String[] createStatements = {
+            """
+        CREATE TABLE IF NOT EXISTS USERS (
+            `ID` int NOT NULL AUTO_INCREMENT,
+            `NAME` varchar(255) NOT NULL,
+            `PASSWORD` varchar(255) NOT NULL,
+            `EMAIL` varchar(255) NOT NULL,
+            PRIMARY KEY (`ID`),
+            INDEX(ID)
+        )
+        """,
+            """
+        CREATE TABLE IF NOT EXISTS AUTH (
+            `NAME` varchar(255) NOT NULL,
+            `TOKEN` varchar(255) NOT NULL
+        )
+        """,
+            """
+        CREATE TABLE IF NOT EXISTS GAME (
+            `ID` int NOT NULL,
+            `WHITENAME` varchar(255),
+            `BLACKNAME` varchar(255),
+            `GAMENAME` varchar(255) NOT NULL,
+            `JSON` TEXT NOT NULL
+        )
+        """
+    };
 
-    private final AuthDAO authDAO;
-    private final UserDAO userDAO;
-    private final GameDAO gameDAO;
-
-    /**
-     * Initializes the data access layer based on the specified location.
-     *
-     * @param dataLocation the storage backend to use
-     */
-    public DataAccess(DataLocation dataLocation) {
-        switch (dataLocation) {
-            case SQL -> throw new UnsupportedOperationException("SQL support not implemented yet");
-            case MEMORY -> {
-                this.authDAO = new MemoryAuthDAO();
-                this.userDAO = new MemoryUserDAO();
-                this.gameDAO = new MemoryGameDAO();
+    public static void configureDatabase() throws ResponseException {
+        try {
+            DatabaseManager.createDatabase();
+            try (var conn = DatabaseManager.getConnection()) {
+                for (var statement : createStatements) {
+                    try (var preparedStatement = conn.prepareStatement(statement)) {
+                        preparedStatement.executeUpdate();
+                    }
+                }
+            } catch (SQLException ex) {
+                throw new ResponseException(500, String.format("Unable to configure database: %s", ex.getMessage()));
             }
-            default -> throw new IllegalArgumentException("Unknown data location: " + dataLocation);
+        } catch (DataAccessException ex) {
+            throw new ResponseException(500, String.format("Unable to configure database: %s", ex.getMessage()));
         }
-    }
-
-    /**
-     * @return the AuthDAO instance
-     */
-    public AuthDAO getAuthDAO() {
-        return authDAO;
-    }
-
-    /**
-     * @return the UserDAO instance
-     */
-    public UserDAO getUserDAO() {
-        return userDAO;
-    }
-
-    /**
-     * @return the GameDAO instance
-     */
-    public GameDAO getGameDAO() {
-        return gameDAO;
-    }
-
-    /**
-     * Enum representing supported data storage backend
-     */
-    public enum DataLocation {
-        SQL,
-        MEMORY
     }
 }

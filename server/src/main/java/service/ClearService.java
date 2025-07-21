@@ -1,12 +1,13 @@
 package service;
 
 import dataaccess.AuthDAO;
+import dataaccess.DataAccessException;
 import dataaccess.GameDAO;
 import dataaccess.UserDAO;
+import exception.ResponseException;
 
 /**
- * Service responsible for clearing all data from the application.
- * This includes users, authentication tokens, and games.
+ * Handles requests to clear the game
  */
 public class ClearService {
     private final UserDAO userDAO;
@@ -14,11 +15,10 @@ public class ClearService {
     private final GameDAO gameDAO;
 
     /**
-     * Constructs a ClearService with the given DAOs.
-     *
-     * @param userDAO the data access object for users
-     * @param authDAO the data access object for authentication tokens
-     * @param gameDAO the data access object for games
+     * Accepts objects providing data access
+     * @param userDAO UserDAO object providing access to the user database
+     * @param authDAO AuthDAO object providing access to the authorization database
+     * @param gameDAO GameDAO object providing access to the game database
      */
     public ClearService(UserDAO userDAO, AuthDAO authDAO, GameDAO gameDAO) {
         this.userDAO = userDAO;
@@ -27,10 +27,9 @@ public class ClearService {
     }
 
     /**
-     * Clears all stored data in the system.
-     * This method resets the user, auth, and game stores.
+     * Clears the databases by calling each DAO's clear function
      */
-    public void clearDatabase() {
+    public void clearDatabase() throws ResponseException, DataAccessException {
         userDAO.clear();
         authDAO.clear();
         gameDAO.clear();

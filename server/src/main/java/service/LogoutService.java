@@ -1,36 +1,41 @@
 package service;
 
 import dataaccess.AuthDAO;
+import dataaccess.DataAccessException;
 import exception.ResponseException;
 import handlers.LogoutRequest;
+import model.AuthData;
 
 /**
- * Service responsible for handling user logout requests.
+ * Handles requests to log a user out
  */
 public class LogoutService {
     private final AuthDAO authDAO;
 
     /**
-     * Constructs a LogoutService with the given AuthDAO.
      *
-     * @param authDAO the data access object for authentication tokens
+     * @param authDAO AuthDAO object providing access to the authorization data
      */
     public LogoutService(AuthDAO authDAO) {
         this.authDAO = authDAO;
     }
 
     /**
-     * Logs out a user by deleting their authentication token.
-     *
-     * @param authToken the logout request containing the token to invalidate
-     * @throws ResponseException if the token does not exist or is invalid
+     * Logs a user out, returning nothing
+     * @param authToken LogoutRequest object containing a string with the authToken of the user to be logged out
+     * @throws ResponseException Indicates that the user is not authorized (provided invalid authToken)
      */
     public void logoutUser(LogoutRequest authToken) throws ResponseException {
-        // Attempt to delete the token
-        boolean removed = authDAO.deleteAuth(authToken.authToken());
-
-        // If deletion failed, token was invalid
-        if (!removed) {
+        try {
+            AuthData authData = authDAO.getAuth(authToken.authToken());
+            if (authData == null) {
+                throw new ResponseException(401, "error: unauthorized");
+            }
+            boolean removed = authDAO.deleteAuth(authData.authToken());
+            if (!removed) {
+                throw new ResponseException(401, "error: unauthorized");
+            }
+        } catch (DataAccessException e) {
             throw new ResponseException(401, "error: unauthorized");
         }
     }
