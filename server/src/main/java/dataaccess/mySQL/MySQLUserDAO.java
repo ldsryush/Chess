@@ -1,4 +1,4 @@
-package dataAccess.mySQL;
+package dataaccess.mySQL;
 
 import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
@@ -6,17 +6,21 @@ import dataaccess.DatabaseManager;
 import dataaccess.UserDAO;
 import exception.ResponseException;
 import model.UserData;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Objects;
 
+/**
+ * Class to provide access to the database for UserData
+ */
 public class MySQLUserDAO implements UserDAO {
     private final Connection conn;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
+    /**
+     * Connects to the database
+     * @throws ResponseException if connection fails
+     */
     public MySQLUserDAO() throws ResponseException {
         DataAccess.configureDatabase();
         try {
@@ -26,64 +30,80 @@ public class MySQLUserDAO implements UserDAO {
         }
     }
 
+    /**
+     * Checks whether a given user exists in the database
+     * @param userData object containing information on the user
+     * @return true if the user exists/false if they don't
+     * @throws DataAccessException if anything fails
+     */
     @Override
     public boolean isUser(UserData userData) throws DataAccessException {
-        String sql = "SELECT 1 FROM USERS WHERE NAME=?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, userData.username());
-            try (ResultSet rs = stmt.executeQuery()) {
+        try (var preparedStatement = conn.prepareStatement("SELECT NAME FROM USERS WHERE NAME=?")) {
+            preparedStatement.setString(1, userData.username());
+            try (var rs = preparedStatement.executeQuery()) {
                 return rs.next();
             }
         } catch (SQLException ex) {
-            throw new DataAccessException("Error checking user existence", ex);
+            throw new DataAccessException(ex.getMessage());
         }
     }
 
+    /**
+     * Gets the UserData object associated with a given username
+     * @param username username to search for
+     * @return UserData object containing all the user's data
+     * @throws DataAccessException if anything fails
+     */
     @Override
     public UserData getUser(String username) throws DataAccessException {
-        String sql = "SELECT PASSWORD, EMAIL FROM USERS WHERE NAME=?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, username);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    String passwordHash = rs.getString("PASSWORD");
-                    String email = rs.getString("EMAIL");
-                    return new UserData(username, passwordHash, email);
+        try (var preparedStatement = conn.prepareStatement("SELECT PASSWORD, EMAIL from USERS where NAME=?")) {
+            preparedStatement.setString(1, username);
+            try (var rs = preparedStatement.executeQuery()) {
+                String password = "";
+                String email = "";
+                while (rs.next()) {
+                    password = rs.getString("PASSWORD");
+                    email = rs.getString("EMAIL");
                 }
-                return null;
+                if (Objects.equals(password, "") && Objects.equals(email, "")) {
+                    return null;
+                }
+                return new UserData(username, password, email);
             }
         } catch (SQLException e) {
-            throw new DataAccessException("Error retrieving user", e);
+            throw new DataAccessException(e.getMessage());
         }
     }
 
+    /**
+     * Creates a user using the data given
+     * @param userData the data to add to the database
+     * @throws DataAccessException if anything fails
+     */
     @Override
     public void createUser(UserData userData) throws DataAccessException {
-        String sql = "INSERT INTO USERS (NAME, PASSWORD, EMAIL) VALUES (?, ?, ?)";
-        String hashedPassword = encoder.encode(userData.password());
+        try (var preparedStatement = conn.prepareStatement("INSERT INTO USERS (NAME, PASSWORD, EMAIL) VALUE(?, ?, ?)")) {
+            preparedStatement.setString(1, userData.username());
+            preparedStatement.setString(2, userData.password());
+            preparedStatement.setString(3, userData.email());
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, userData.username());
-            stmt.setString(2, hashedPassword);
-            stmt.setString(3, userData.email());
-            stmt.executeUpdate();
+            preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataAccessException("Error creating user", e);
+            throw new DataAccessException(e.getMessage());
         }
     }
 
+    /**
+     * Clears the entire database
+     * @throws DataAccessException if anything fails
+     */
     @Override
     public void clear() throws DataAccessException {
-        String sql = "TRUNCATE TABLE USERS";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.executeUpdate();
+        try (var preparedStatement = conn.prepareStatement("TRUNCATE TABLE USERS")) {
+            preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataAccessException("Error clearing users", e);
+            throw new DataAccessException(e.getMessage());
         }
     }
 
-    public boolean verifyPassword(String username, String inputPassword) throws DataAccessException {
-        UserData user = getUser(username);
-        return user != null && encoder.matches(inputPassword, user.password());
-    }
 }

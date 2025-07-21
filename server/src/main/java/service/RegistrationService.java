@@ -1,14 +1,16 @@
 package service;
 
 import dataaccess.AuthDAO;
+import dataaccess.DataAccessException;
 import dataaccess.UserDAO;
 import exception.ResponseException;
 import handlers.RegistrationRequest;
 import model.AuthData;
 import model.UserData;
+import at.favre.lib.crypto.bcrypt.BCrypt;
 
 /**
- * Service responsible for handling user registration requests.
+ * Handles requests to register new users
  */
 public class RegistrationService {
 
@@ -16,10 +18,8 @@ public class RegistrationService {
     private final AuthDAO authDAO;
 
     /**
-     * Constructs a RegistrationService with the given UserDAO and AuthDAO.
-     *
-     * @param userDAO the data access object for user data
-     * @param authDAO the data access object for authentication tokens
+     * @param userDAO UserDAO object providing access to the user data
+     * @param authDAO AuthDAO object providing access to the authorization data
      */
     public RegistrationService(UserDAO userDAO, AuthDAO authDAO) {
         this.userDAO = userDAO;
@@ -27,44 +27,30 @@ public class RegistrationService {
     }
 
     /**
-     * Registers a new user and returns an authentication token.
+     * Registers the user by checking for duplicates, saving the user into the database,
+     * creating an authentication token, saving that to the database, and returning it.
      *
-     * @param userRequest the registration request containing username, password, and email
-     * @return an AuthData object representing the authenticated session
-     * @throws ResponseException if the request is invalid or the username is already taken
+     * @param userRequest The user object to be registered
+     * @return the AuthToken object that has been created
+     * @throws ResponseException indicating either invalid fields (bad request) or that the username is already taken
      */
     public AuthData registerUser(RegistrationRequest userRequest) throws ResponseException {
-        // Validate input fields
-        if (isInvalid(userRequest.username()) ||
-                isInvalid(userRequest.password()) ||
-                isInvalid(userRequest.email())) {
+        if (userRequest.username() == null || userRequest.password() == null || userRequest.email() == null) {
             throw new ResponseException(400, "error: bad request");
         }
 
-        // Create a new UserData object
-        UserData userData = new UserData(
-                userRequest.username(),
-                userRequest.password(),
-                userRequest.email()
-        );
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, userRequest.password().toCharArray());
+        UserData userData = new UserData(userRequest.username(), hashedPassword, userRequest.email());
 
-        // Check if the username is already taken
-        if (this.userDAO.isUser(userData)) {
-            throw new ResponseException(403, "error: already taken");
+        try {
+            if (this.userDAO.isUser(userData)) {
+                throw new ResponseException(403, "error: already taken");
+            } else {
+                this.userDAO.createUser(userData);
+                return this.authDAO.createAuth(userData);
+            }
+        } catch (DataAccessException e) {
+            throw new ResponseException(500, e.getMessage());
         }
-
-        // Store the new user and generate an auth token
-        this.userDAO.createUser(userData);
-        return this.authDAO.createAuth(userData);
-    }
-
-    /**
-     * Checks if a string value is null or blank.
-     *
-     * @param value the string to validate
-     * @return true if the value is invalid, false otherwise
-     */
-    private boolean isInvalid(String value) {
-        return value == null || value.isBlank();
     }
 }
