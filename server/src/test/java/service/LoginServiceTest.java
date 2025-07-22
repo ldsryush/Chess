@@ -10,7 +10,7 @@ import model.UserData;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import at.favre.lib.crypto.bcrypt.BCrypt;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class LoginServiceTest {
     static final MemoryUserDAO userDAO = new MemoryUserDAO();
@@ -32,7 +32,7 @@ public class LoginServiceTest {
     @Test
     void testLoginValid() throws ResponseException, DataAccessException {
         String rawPassword = "realPassword";
-        String hashedPassword = BCrypt.withDefaults().hashToString(12, rawPassword.toCharArray());
+        String hashedPassword = BCrypt.hashpw(rawPassword, BCrypt.gensalt(12));
 
         UserData userData = new UserData("realName", hashedPassword, "realEmail@email.com");
         userDAO.createUser(userData);

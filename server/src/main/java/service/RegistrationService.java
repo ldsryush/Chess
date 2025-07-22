@@ -7,7 +7,7 @@ import exception.ResponseException;
 import handlers.RegistrationRequest;
 import model.AuthData;
 import model.UserData;
-import at.favre.lib.crypto.bcrypt.BCrypt;
+import org.mindrot.jbcrypt.BCrypt;
 
 /**
  * Handles requests to register new users
@@ -36,7 +36,7 @@ public class RegistrationService {
             throw new ResponseException(400, "error: bad request");
         }
 
-        String hashedPassword = BCrypt.withDefaults().hashToString(12, userRequest.password().toCharArray());
+        String hashedPassword = BCrypt.hashpw(userRequest.password(), BCrypt.gensalt(12));
         UserData userData = new UserData(userRequest.username(), hashedPassword, userRequest.email());
 
         if (this.userDAO.isUser(userData)) {

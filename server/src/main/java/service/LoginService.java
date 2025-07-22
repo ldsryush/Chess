@@ -7,7 +7,7 @@ import exception.ResponseException;
 import handlers.LoginRequest;
 import model.AuthData;
 import model.UserData;
-import at.favre.lib.crypto.bcrypt.BCrypt;
+import org.mindrot.jbcrypt.BCrypt;
 
 /**
  * Handles requests for a user to log in
@@ -31,7 +31,6 @@ public class LoginService {
      * @throws DataAccessException if a database error occurs
      */
     public AuthData login(LoginRequest loginRequest) throws ResponseException, DataAccessException {
-        // ✅ Validate input
         if (loginRequest == null ||
                 loginRequest.username() == null || loginRequest.username().isBlank() ||
                 loginRequest.password() == null || loginRequest.password().isBlank()) {
@@ -40,20 +39,11 @@ public class LoginService {
 
         UserData userData = userDAO.getUser(loginRequest.username());
 
-        if (userData == null) {
+        if (userData == null || !BCrypt.checkpw(loginRequest.password(), userData.password())) {
             throw new ResponseException(401, "error: unauthorized");
         }
 
         authDAO.deleteAuth(userData.username());
-
-        BCrypt.Result result = BCrypt.verifyer().verify(
-                loginRequest.password().toCharArray(),
-                userData.password().toCharArray()
-        );
-
-        if (!result.verified) {
-            throw new ResponseException(401, "error: unauthorized");
-        }
 
         return authDAO.createAuth(userData);
     }
