@@ -1,5 +1,6 @@
 package dataaccess.memory;
 
+import dataaccess.DataAccessException;
 import dataaccess.UserDAO;
 import model.UserData;
 
@@ -10,7 +11,7 @@ import java.util.HashMap;
  */
 public class MemoryUserDAO implements UserDAO {
 
-    private  final HashMap<String, UserData> allUsers = new HashMap<>();
+    private final HashMap<String, UserData> allUsers = new HashMap<>();
 
     /**
      * Indicates whether the specified username exists
@@ -32,9 +33,15 @@ public class MemoryUserDAO implements UserDAO {
 
     /**
      * Creates a new user by adding the UserData to the database
+     * Throws a DataAccessException if the username already exists
+     *
      * @param userData UserData object of the data to be added
+     * @throws DataAccessException if username already exists
      */
-    public void createUser(UserData userData) {
+    public void createUser(UserData userData) throws DataAccessException {
+        if (allUsers.containsKey(userData.username())) {
+            throw new DataAccessException("User already exists: " + userData.username());
+        }
         allUsers.put(userData.username(), userData);
     }
 
