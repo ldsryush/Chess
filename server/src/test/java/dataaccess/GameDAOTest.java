@@ -26,4 +26,19 @@ public class GameDAOTest {
     void testGetGameNotFound() throws DataAccessException {
         Assertions.assertNull(dao.getGame(999));
     }
+
+    @Test
+    void testAddDuplicateGameFails() {
+        GameData game = new GameData(2, null, null, "GameName", new ChessGame());
+        Assertions.assertDoesNotThrow(() -> dao.addGame(game));
+        Assertions.assertThrows(DataAccessException.class, () -> dao.addGame(game));
+    }
+
+    @Test
+    void testClearRemovesAllGames() throws DataAccessException {
+        GameData game = new GameData(3, null, null, "ToBeCleared", new ChessGame());
+        dao.addGame(game);
+        dao.clear();
+        Assertions.assertNull(dao.getGame(3));
+    }
 }
