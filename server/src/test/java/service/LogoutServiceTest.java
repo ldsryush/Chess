@@ -24,7 +24,7 @@ public class LogoutServiceTest {
         AUTH_DAO = temp;
     }
 
-    static final LogoutService service = new LogoutService(AUTH_DAO);
+    static final LogoutService SERVICE = new LogoutService(AUTH_DAO);
 
     @BeforeEach
     void clear() throws DataAccessException {
@@ -34,7 +34,7 @@ public class LogoutServiceTest {
     @Test
     void testLogoutUserInvalid() {
         LogoutRequest request = new LogoutRequest("invalid-token");
-        Assertions.assertThrows(ResponseException.class, () -> service.logoutUser(request));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.logoutUser(request));
     }
 
     @Test
@@ -43,7 +43,7 @@ public class LogoutServiceTest {
         AuthData authData = AUTH_DAO.createAuth(user);
         LogoutRequest request = new LogoutRequest(authData.authToken());
 
-        Assertions.assertDoesNotThrow(() -> service.logoutUser(request));
+        Assertions.assertDoesNotThrow(() -> SERVICE.logoutUser(request));
 
         Assertions.assertFalse(AUTH_DAO.authExists(authData.authToken()));
     }

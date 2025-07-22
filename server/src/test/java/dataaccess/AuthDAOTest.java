@@ -9,69 +9,69 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class AuthDAOTest {
-    static final MemoryAuthDAO authDAO = new MemoryAuthDAO();
-    static final MemoryUserDAO userDAO = new MemoryUserDAO();
+    static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
+    static final MemoryUserDAO USER_DAO = new MemoryUserDAO();
 
     @BeforeEach
     void clear() throws DataAccessException {
-        authDAO.clear();
-        userDAO.clear();
+        AUTH_DAO.clear();
+        USER_DAO.clear();
     }
 
     @Test
     void testCreateAuthSuccess() throws DataAccessException {
         UserData user = new UserData("alice", "pass123", "alice@example.com");
-        userDAO.createUser(user);
+        USER_DAO.createUser(user);
 
-        AuthData auth = authDAO.createAuth(user);
+        AuthData auth = AUTH_DAO.createAuth(user);
         Assertions.assertNotNull(auth);
         Assertions.assertEquals("alice", auth.username());
 
-        AuthData fetched = authDAO.getAuthData(auth.authToken());
+        AuthData fetched = AUTH_DAO.getAuthData(auth.authToken());
         Assertions.assertEquals(auth, fetched);
     }
 
     @Test
     void testAuthExistsTrue() throws DataAccessException {
         UserData user = new UserData("bob", "securePass", "bob@example.com");
-        userDAO.createUser(user);
-        AuthData auth = authDAO.createAuth(user);
+        USER_DAO.createUser(user);
+        AuthData auth = AUTH_DAO.createAuth(user);
 
-        Assertions.assertTrue(authDAO.authExists(auth.authToken()));
+        Assertions.assertTrue(AUTH_DAO.authExists(auth.authToken()));
     }
 
     @Test
     void testAuthExistsFalse() throws DataAccessException {
-        Assertions.assertFalse(authDAO.authExists("nonexistent-token"));
+        Assertions.assertFalse(AUTH_DAO.authExists("nonexistent-token"));
     }
 
     @Test
     void testGetAuthDataNotFound() throws DataAccessException {
-        Assertions.assertNull(authDAO.getAuthData("ghost-token"));
+        Assertions.assertNull(AUTH_DAO.getAuthData("ghost-token"));
     }
 
     @Test
     void testDeleteAuthSuccess() throws DataAccessException {
         UserData user = new UserData("carol", "pass456", "carol@example.com");
-        userDAO.createUser(user);
-        AuthData auth = authDAO.createAuth(user);
+        USER_DAO.createUser(user);
+        AuthData auth = AUTH_DAO.createAuth(user);
 
-        Assertions.assertTrue(authDAO.deleteAuth(auth.authToken()));
-        Assertions.assertNull(authDAO.getAuthData(auth.authToken()));
+        Assertions.assertTrue(AUTH_DAO.deleteAuth(auth.authToken()));
+        Assertions.assertNull(AUTH_DAO.getAuthData(auth.authToken()));
     }
 
     @Test
     void testDeleteAuthInvalidToken() throws DataAccessException {
-        Assertions.assertFalse(authDAO.deleteAuth("invalid-token"));
+        Assertions.assertFalse(AUTH_DAO.deleteAuth("invalid-token"));
     }
 
     @Test
     void testClearAuths() throws DataAccessException {
         UserData user = new UserData("dave", "pass789", "dave@example.com");
-        userDAO.createUser(user);
-        AuthData auth = authDAO.createAuth(user);
+        USER_DAO.createUser(user);
+        AuthData auth = AUTH_DAO.createAuth(user);
 
-        authDAO.clear();
-        Assertions.assertFalse(authDAO.authExists(auth.authToken()));
+        AUTH_DAO.clear();
+        Assertions.assertFalse(AUTH_DAO.authExists(auth.authToken()));
     }
 }
