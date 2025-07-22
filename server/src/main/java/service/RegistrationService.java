@@ -17,10 +17,6 @@ public class RegistrationService {
     private final UserDAO userDAO;
     private final AuthDAO authDAO;
 
-    /**
-     * @param userDAO UserDAO object providing access to the user data
-     * @param authDAO AuthDAO object providing access to the authorization data
-     */
     public RegistrationService(UserDAO userDAO, AuthDAO authDAO) {
         this.userDAO = userDAO;
         this.authDAO = authDAO;
@@ -32,9 +28,10 @@ public class RegistrationService {
      *
      * @param userRequest The user object to be registered
      * @return the AuthToken object that has been created
-     * @throws ResponseException indicating either invalid fields (bad request) or that the username is already taken
+     * @throws ResponseException for bad input or duplicate username
+     * @throws DataAccessException for database failures
      */
-    public AuthData registerUser(RegistrationRequest userRequest) throws ResponseException {
+    public AuthData registerUser(RegistrationRequest userRequest) throws ResponseException, DataAccessException {
         if (userRequest.username() == null || userRequest.password() == null || userRequest.email() == null) {
             throw new ResponseException(400, "error: bad request");
         }
@@ -42,15 +39,11 @@ public class RegistrationService {
         String hashedPassword = BCrypt.withDefaults().hashToString(12, userRequest.password().toCharArray());
         UserData userData = new UserData(userRequest.username(), hashedPassword, userRequest.email());
 
-        try {
-            if (this.userDAO.isUser(userData)) {
-                throw new ResponseException(403, "error: already taken");
-            } else {
-                this.userDAO.createUser(userData);
-                return this.authDAO.createAuth(userData);
-            }
-        } catch (DataAccessException e) {
-            throw new ResponseException(500, e.getMessage());
+        if (this.userDAO.isUser(userData)) {
+            throw new ResponseException(403, "error: already taken");
         }
+
+        this.userDAO.createUser(userData);
+        return this.authDAO.createAuth(userData);
     }
 }

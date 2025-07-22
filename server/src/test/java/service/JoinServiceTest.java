@@ -17,27 +17,22 @@ public class JoinServiceTest {
     static final GameService gameService = new GameService(gameDAO);
 
     @BeforeEach
-    void clear() throws DataAccessException {
+    void clear() {
         gameDAO.clear();
     }
 
     @Test
     void testJoinGameBad() {
         try {
-            CreateGameRequest createReq = new CreateGameRequest("testGame", "12345");
-            GameID gameID = gameService.createGame(createReq);
-
             AuthData authData = new AuthData("testUser", "12345");
+            GameID gameID = gameService.createGame(new CreateGameRequest(authData.authToken(), "testGame"));
 
-            // Invalid game ID
-            Assertions.assertThrows(ResponseException.class,
-                    () -> service.joinGame(new JoinGameRequest("BLACK", 99999), authData));
+            Assertions.assertThrows(ResponseException.class, () ->
+                    service.joinGame(new JoinGameRequest("BLACK", 5), authData));
 
-            // Invalid color
-            Assertions.assertThrows(ResponseException.class,
-                    () -> service.joinGame(new JoinGameRequest("green", gameID.gameID()), authData));
-
-        } catch (DataAccessException e) {
+            Assertions.assertThrows(ResponseException.class, () ->
+                    service.joinGame(new JoinGameRequest("green", gameID.gameID()), authData));
+        } catch (DataAccessException | ResponseException e) {
             Assertions.fail();
         }
     }
@@ -45,18 +40,15 @@ public class JoinServiceTest {
     @Test
     void testJoinGameGood() {
         try {
-            CreateGameRequest createReq = new CreateGameRequest("testGame", "12345");
-            GameID gameID = gameService.createGame(createReq);
-            JoinGameRequest req = new JoinGameRequest("WHITE", gameID.gameID());
             AuthData authData = new AuthData("testUser", "12345");
+            GameID gameID = gameService.createGame(new CreateGameRequest(authData.authToken(), "testGame"));
 
-            // Valid join
+            JoinGameRequest req = new JoinGameRequest("WHITE", gameID.gameID());
+
             Assertions.assertDoesNotThrow(() -> service.joinGame(req, authData));
 
-            // Attempt to join again with same user (should be rejected)
             Assertions.assertThrows(ResponseException.class, () -> service.joinGame(req, authData));
-
-        } catch (DataAccessException e) {
+        } catch (DataAccessException | ResponseException e) {
             Assertions.fail();
         }
     }

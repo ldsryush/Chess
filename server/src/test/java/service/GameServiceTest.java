@@ -2,6 +2,7 @@ package service;
 
 import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryGameDAO;
+import exception.ResponseException;
 import handlers.CreateGameRequest;
 import model.GameID;
 import org.junit.jupiter.api.Assertions;
@@ -19,22 +20,20 @@ public class GameServiceTest {
 
     @Test
     void testCreateGameNotNull() {
-        CreateGameRequest newGame = new CreateGameRequest("testGame", "testToken");
+        CreateGameRequest newGame = new CreateGameRequest("testToken", "testGame");
 
         GameID gameID = null;
         try {
             gameID = service.createGame(newGame);
-        } catch (DataAccessException e) {
+        } catch (DataAccessException | ResponseException e) {
             Assertions.fail();
         }
 
-        // Positive test case: game should be retrievable
         Assertions.assertNotNull(gameDAO.getGame(gameID.gameID()));
     }
 
     @Test
     void testCreateGameNull() {
-        // Negative test case: game ID 1234 should not exist
         Assertions.assertNull(gameDAO.getGame(1234));
     }
 }

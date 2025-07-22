@@ -2,6 +2,7 @@ package service;
 
 import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryGameDAO;
+import exception.ResponseException;
 import handlers.CreateGameRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,13 +30,13 @@ public class ListServiceTest {
     @Test
     void testGetGamesNonEmpty() {
         try {
-            gameService.createGame(new CreateGameRequest("game1", "auth1"));
-            gameService.createGame(new CreateGameRequest("game2", "auth2"));
-            gameService.createGame(new CreateGameRequest("game3", "auth3"));
+            gameService.createGame(new CreateGameRequest("auth1", "game1"));
+            gameService.createGame(new CreateGameRequest("auth2", "game2"));
+            gameService.createGame(new CreateGameRequest("auth3", "game3"));
 
             Assertions.assertEquals(3, service.getGames().size());
-        } catch (DataAccessException e) {
-            Assertions.fail("Data access error during non-empty list check");
+        } catch (DataAccessException | ResponseException e) {
+            Assertions.fail("Error during non-empty list check: " + e.getMessage());
         }
     }
 }

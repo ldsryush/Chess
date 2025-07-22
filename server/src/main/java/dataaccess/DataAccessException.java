@@ -1,16 +1,14 @@
 package dataaccess;
 
 /**
- * Custom exception for errors related to data access operations.
+ * Indicates there was an error connecting to the database
  */
 public class DataAccessException extends Exception {
-
-    /**
-     * Constructs a new DataAccessException with the specified detail message.
-     *
-     * @param message the detail message describing the error
-     */
     public DataAccessException(String message) {
         super(message);
+    }
+
+    public DataAccessException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

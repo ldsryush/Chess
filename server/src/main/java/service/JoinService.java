@@ -15,10 +15,6 @@ import java.util.Objects;
 public class JoinService {
     private final GameDAO gameDAO;
 
-    /**
-     * Receives a GameDAO object to provide access to the game data
-     * @param gameDAO GameDAO object providing access to the game data
-     */
     public JoinService(GameDAO gameDAO) {
         this.gameDAO = gameDAO;
     }
@@ -26,43 +22,48 @@ public class JoinService {
     /**
      * Joins a game using the data from the request to join the game
      * as well as the username found from authenticating the user.
-     * @param request JoinGameRequest object, containing playerColor and gameID
+     *
+     * @param request  JoinGameRequest object, containing playerColor and gameID
      * @param authData AuthData object used to get the player's username
-     * @throws ResponseException if (a) game doesn't exist, (b) color is already taken, or (c) color is invalid
+     * @throws ResponseException    if (a) game doesn't exist, (b) color is already taken, (c) color is invalid, or (d) request is malformed
+     * @throws DataAccessException if a database error occurs
      */
     public void joinGame(JoinGameRequest request, AuthData authData) throws ResponseException, DataAccessException {
-//        Ensures that the game with the requested ID exists
-        GameData game = gameDAO.getGame(request.gameID());
-        if (game == null) {
-            throw new ResponseException(400, "error: bad request");
+        // ✅ Validate input
+        if (request == null || request.gameID() == null || request.playerColor() == null || request.playerColor().isBlank()) {
+            throw new ResponseException(400, "error: missing required fields");
         }
 
-//        Assigns the new usernames, making sure they haven't been taken already (also ensures valid color)
+        GameData game = gameDAO.getGame(request.gameID());
+        if (game == null) {
+            throw new ResponseException(400, "error: game not found");
+        }
+
         String whiteUsername = game.whiteUsername();
         String blackUsername = game.blackUsername();
 
         if (Objects.equals(request.playerColor(), "WHITE")) {
             if (whiteUsername != null) {
-                throw new ResponseException(403, "error: already taken");
+                throw new ResponseException(403, "error: color already taken");
             }
             whiteUsername = authData.username();
         } else if (Objects.equals(request.playerColor(), "BLACK")) {
             if (blackUsername != null) {
-                throw new ResponseException(403, "error: already taken");
+                throw new ResponseException(403, "error: color already taken");
             }
             blackUsername = authData.username();
-        } else if (request.playerColor() != null) {
-            throw new ResponseException(400, "error: bad request");
+        } else {
+            throw new ResponseException(400, "error: invalid color");
         }
 
-        GameData newGame = new GameData(
+        GameData updatedGame = new GameData(
                 request.gameID(),
                 whiteUsername,
                 blackUsername,
                 game.gameName(),
-                game.game());
+                game.game()
+        );
 
-        gameDAO.updateGame(newGame);
+        gameDAO.updateGame(updatedGame);
     }
-
 }
