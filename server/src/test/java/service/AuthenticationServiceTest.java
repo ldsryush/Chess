@@ -10,35 +10,31 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 public class AuthenticationServiceTest {
-    static final MemoryAuthDAO authDAO = new MemoryAuthDAO();
-    static final AuthenticationService service = new AuthenticationService(authDAO);
+    static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
+    static final AuthenticationService SERVICE = new AuthenticationService(AUTH_DAO);
 
     @BeforeEach
     void clear() throws DataAccessException {
-        authDAO.clear();
+        AUTH_DAO.clear();
     }
 
     @Test
     void testAuthenticate() throws ResponseException, DataAccessException {
         UserData userData = new UserData("patrick", "12345", "test@email.com");
-        AuthData authData = authDAO.createAuth(userData);
+        AuthData authData = AUTH_DAO.createAuth(userData);
 
-        // ✅ Negative test case: invalid token
-        Assertions.assertThrows(ResponseException.class, () -> service.authenticate("fakeAuth"));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.authenticate("fakeAuth"));
 
-        // ✅ Positive test case: valid token should not throw
-        Assertions.assertDoesNotThrow(() -> service.authenticate(authData.authToken()));
+        Assertions.assertDoesNotThrow(() -> SERVICE.authenticate(authData.authToken()));
     }
 
     @Test
     void testGetAuthData() throws ResponseException, DataAccessException {
         UserData userData = new UserData("patrick", "12345", "test@email.com");
-        AuthData authData = authDAO.createAuth(userData);
+        AuthData authData = AUTH_DAO.createAuth(userData);
 
-        // ✅ Positive test case
-        Assertions.assertEquals(authData, service.getAuthData(authData.authToken()));
+        Assertions.assertEquals(authData, SERVICE.getAuthData(authData.authToken()));
 
-        // ✅ Negative test case: invalid token should throw
-        Assertions.assertThrows(ResponseException.class, () -> service.getAuthData("fake auth"));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.getAuthData("fake auth"));
     }
 }

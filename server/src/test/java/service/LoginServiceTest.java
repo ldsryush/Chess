@@ -13,20 +13,20 @@ import org.junit.jupiter.api.Test;
 import org.mindrot.jbcrypt.BCrypt;
 
 public class LoginServiceTest {
-    static final MemoryUserDAO userDAO = new MemoryUserDAO();
-    static final MemoryAuthDAO authDAO = new MemoryAuthDAO();
-    static final LoginService service = new LoginService(userDAO, authDAO);
+    static final MemoryUserDAO USER_DAO = new MemoryUserDAO();
+    static final MemoryAuthDAO AUTH_DAO = new MemoryAuthDAO();
+    static final LoginService SERVICE = new LoginService(USER_DAO, AUTH_DAO);
 
     @BeforeEach
     void clear() throws DataAccessException {
-        userDAO.clear();
-        authDAO.clear();
+        USER_DAO.clear();
+        AUTH_DAO.clear();
     }
 
     @Test
     void testLoginUnauthorized() {
         Assertions.assertThrows(ResponseException.class, () ->
-                service.login(new LoginRequest("fakeName", "1234")));
+                SERVICE.login(new LoginRequest("fakeName", "1234")));
     }
 
     @Test
@@ -35,13 +35,13 @@ public class LoginServiceTest {
         String hashedPassword = BCrypt.hashpw(rawPassword, BCrypt.gensalt(12));
 
         UserData userData = new UserData("realName", hashedPassword, "realEmail@email.com");
-        userDAO.createUser(userData);
+        USER_DAO.createUser(userData);
 
         LoginRequest request = new LoginRequest(userData.username(), rawPassword);
 
-        Assertions.assertDoesNotThrow(() -> service.login(request));
+        Assertions.assertDoesNotThrow(() -> SERVICE.login(request));
 
-        AuthData authData = service.login(request);
+        AuthData authData = SERVICE.login(request);
         Assertions.assertNotNull(authData);
         Assertions.assertEquals(userData.username(), authData.username());
     }

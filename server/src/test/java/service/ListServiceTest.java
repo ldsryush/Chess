@@ -9,19 +9,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ListServiceTest {
-    static final MemoryGameDAO gameDAO = new MemoryGameDAO();
-    static final ListService service = new ListService(gameDAO);
-    static final GameService gameService = new GameService(gameDAO);
+    static final MemoryGameDAO GAME_DAO = new MemoryGameDAO();
+    static final ListService SERVICE = new ListService(GAME_DAO);
+    static final GameService GAME_SERVICE = new GameService(GAME_DAO);
 
     @BeforeEach
     void clear() throws DataAccessException {
-        gameDAO.clear();
+        GAME_DAO.clear();
     }
 
     @Test
     void testGetGamesEmpty() {
         try {
-            Assertions.assertTrue(service.getGames().isEmpty());
+            Assertions.assertTrue(SERVICE.getGames().isEmpty());
         } catch (DataAccessException e) {
             Assertions.fail("Data access error during empty list check");
         }
@@ -30,11 +30,11 @@ public class ListServiceTest {
     @Test
     void testGetGamesNonEmpty() {
         try {
-            gameService.createGame(new CreateGameRequest("auth1", "game1"));
-            gameService.createGame(new CreateGameRequest("auth2", "game2"));
-            gameService.createGame(new CreateGameRequest("auth3", "game3"));
+            GAME_SERVICE.createGame(new CreateGameRequest("auth1", "game1"));
+            GAME_SERVICE.createGame(new CreateGameRequest("auth2", "game2"));
+            GAME_SERVICE.createGame(new CreateGameRequest("auth3", "game3"));
 
-            Assertions.assertEquals(3, service.getGames().size());
+            Assertions.assertEquals(3, SERVICE.getGames().size());
         } catch (DataAccessException | ResponseException e) {
             Assertions.fail("Error during non-empty list check: " + e.getMessage());
         }

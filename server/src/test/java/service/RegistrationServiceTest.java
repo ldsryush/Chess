@@ -1,6 +1,5 @@
 package service;
 
-import service.RegistrationService;
 import dataaccess.AuthDAO;
 import dataaccess.DataAccessException;
 import dataaccess.UserDAO;
@@ -13,14 +12,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class RegistrationServiceTest {
-    static final UserDAO userDAO = new MemoryUserDAO();
-    static final AuthDAO authDAO = new MemoryAuthDAO();
-    static final RegistrationService service = new RegistrationService(userDAO, authDAO);
+    static final UserDAO USER_DAO = new MemoryUserDAO();
+    static final AuthDAO AUTH_DAO = new MemoryAuthDAO();
+    static final RegistrationService SERVICE = new RegistrationService(USER_DAO, AUTH_DAO);
 
     @BeforeEach
     void clear() throws DataAccessException {
-        userDAO.clear();
-        authDAO.clear();
+        USER_DAO.clear();
+        AUTH_DAO.clear();
     }
 
     @Test
@@ -31,10 +30,10 @@ public class RegistrationServiceTest {
                 "email@email.com");
 
 //        Test that a real user can be registered
-        Assertions.assertDoesNotThrow(() -> service.registerUser(realReq));
+        Assertions.assertDoesNotThrow(() -> SERVICE.registerUser(realReq));
 
 //        Test against registering again
-        Assertions.assertThrows(ResponseException.class, () -> service.registerUser(realReq));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.registerUser(realReq));
     }
 
     @Test
@@ -46,6 +45,6 @@ public class RegistrationServiceTest {
         );
 
 //        Ensure that good requests must be handled
-        Assertions.assertThrows(ResponseException.class, () -> service.registerUser(badReq));
+        Assertions.assertThrows(ResponseException.class, () -> SERVICE.registerUser(badReq));
     }
 }

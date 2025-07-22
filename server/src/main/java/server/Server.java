@@ -2,9 +2,9 @@ package server;
 
 import com.google.gson.Gson;
 import dataaccess.*;
-import dataaccess.mySQL.MySQLAuthDAO;
-import dataaccess.mySQL.MySQLGameDAO;
-import dataaccess.mySQL.MySQLUserDAO;
+import dataaccess.mysql.MySQLAuthDAO;
+import dataaccess.mysql.MySQLGameDAO;
+import dataaccess.mysql.MySQLUserDAO;
 import exception.ErrorMessage;
 import exception.ResponseException;
 import handlers.*;
