@@ -19,21 +19,15 @@ public class GameServiceTest {
     }
 
     @Test
-    void testCreateGameNotNull() {
+    void testCreateGameNotNull() throws DataAccessException, ResponseException {
         CreateGameRequest newGame = new CreateGameRequest("testToken", "testGame");
 
-        GameID gameID = null;
-        try {
-            gameID = service.createGame(newGame);
-        } catch (DataAccessException | ResponseException e) {
-            Assertions.fail();
-        }
-
+        GameID gameID = service.createGame(newGame);
         Assertions.assertNotNull(gameDAO.getGame(gameID.gameID()));
     }
 
     @Test
-    void testCreateGameNull() {
+    void testCreateGameNull() throws DataAccessException {
         Assertions.assertNull(gameDAO.getGame(1234));
     }
 }
