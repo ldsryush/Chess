@@ -1,7 +1,6 @@
-package dao;
+package dataaccess;
 
 import chess.ChessGame;
-import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryGameDAO;
 import model.GameData;
 import org.junit.jupiter.api.Assertions;

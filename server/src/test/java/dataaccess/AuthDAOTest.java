@@ -1,6 +1,5 @@
-package dao;
+package dataaccess;
 //tests
-import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryAuthDAO;
 import dataaccess.memory.MemoryUserDAO;
 import model.AuthData;

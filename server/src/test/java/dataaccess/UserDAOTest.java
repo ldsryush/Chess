@@ -1,6 +1,5 @@
-package dao;
+package dataaccess;
 
-import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryUserDAO;
 import model.UserData;
 import org.junit.jupiter.api.Assertions;
