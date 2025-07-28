@@ -13,6 +13,7 @@ public class Repl {
     }
 
     public void run() {
+        System.out.print(SET_BG_COLOR_WHITE);
         System.out.println("👑 Welcome to 240 Chess. Type Help to get started. 👑");
         System.out.print(client.help());
 
@@ -36,6 +37,6 @@ public class Repl {
     }
 
     private void printPrompt() {
-        System.out.print("\n" + RESET_BG_COLOR + ">>> " + SET_TEXT_COLOR_GREEN);
+        System.out.print(SET_TEXT_COLOR_BLACK + "\n" + "[" + Client.state + "] >>> " + SET_TEXT_COLOR_GREEN);
     }
 }

@@ -40,6 +40,13 @@ public class ChessBoard {
     }
 
     @Override
+    public String toString() {
+        return "ChessBoard{" +
+                "board=" + Arrays.toString(board) +
+                '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         return this == o || (o instanceof ChessBoard cb && Arrays.deepEquals(board, cb.board));
     }
