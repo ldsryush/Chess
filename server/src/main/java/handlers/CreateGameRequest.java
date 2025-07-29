@@ -1,10 +1,10 @@
 package handlers;
 
 /**
- * Represents request to create new game.
+ * Represents a request to create a new game.
  *
- * @param authToken the authentication token of the requesting user
- * @param gameName  the name of the game to be created
+ * @param gameName    the name of the game to be created
+ * @param playerColor the color chosen by the player
  */
-public record CreateGameRequest(String authToken, String gameName) {
+public record CreateGameRequest(String gameName, String playerColor) {
 }
