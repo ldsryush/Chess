@@ -84,14 +84,20 @@ public class Client {
     }
 
     private String joinGame(String[] params) {
-        if (state == State.LOGGED_OUT) return "Must login first";
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
         int idx = Integer.parseInt(params[0]);
 
         try {
             updateGames();
             var game = allGames.get(idx - 1);
-            if (params.length == 1) return observeGame(game);
-            if (params.length == 2) return joinGameWithColor(params[1], game);
+            if (params.length == 1) {
+                return observeGame(game);
+            }
+            if (params.length == 2) {
+                return joinGameWithColor(params[1], game);
+            }
         } catch (IndexOutOfBoundsException e) {
             return "Requested game doesn't exist";
         }
@@ -112,9 +118,17 @@ public class Client {
     private String joinGameWithColor(String colorParam, GameResponseData game) {
         String color = colorParam.toUpperCase();
 
-        if (color.equals("WHITE") && game.whiteUsername() != null) return "Can't join as white";
-        if (color.equals("BLACK") && game.blackUsername() != null) return "Can't join as black";
-        if (!color.equals("WHITE") && !color.equals("BLACK")) return "Invalid color.";
+        if (color.equals("WHITE")) {
+            if (game.whiteUsername() != null) {
+                return "Can't join as white";
+            }
+        } else if (color.equals("BLACK")) {
+            if (game.blackUsername() != null) {
+                return "Can't join as black";
+            }
+        } else {
+            return "Invalid color.";
+        }
 
         try {
             server.joinGame(new JoinGameRequest(color, game.gameID()));
@@ -127,13 +141,17 @@ public class Client {
     }
 
     private String listGames() {
-        if (state == State.LOGGED_OUT) return "Must login first";
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
         updateGames();
         return buildGameList();
     }
 
     private String createGame(String[] params) {
-        if (state == State.LOGGED_OUT) return "Must login first";
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
         String name = String.join(" ", params);
         GameID gameID;
         try {
@@ -151,7 +169,9 @@ public class Client {
     }
 
     private String logout() {
-        if (state == State.LOGGED_OUT) return "Must login first";
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
         state = State.LOGGED_OUT;
         try {
             server.logoutUser();
@@ -162,7 +182,9 @@ public class Client {
     }
 
     private String register(String[] params) {
-        if (state == State.LOGGED_IN) return "Must logout first";
+        if (state == State.LOGGED_IN) {
+            return "Must logout first";
+        }
         if (params.length == 3) {
             UserData userData = new UserData(params[0], params[1], params[2]);
             AuthData authData;
@@ -178,7 +200,9 @@ public class Client {
     }
 
     private String login(String[] params) {
-        if (state == State.LOGGED_IN) return "Must logout first";
+        if (state == State.LOGGED_IN) {
+            return "Must logout first";
+        }
         if (params.length == 2) {
             UserData userData = new UserData(params[0], params[1], null);
             AuthData authData;
@@ -214,25 +238,8 @@ public class Client {
             ArrayList<GameResponseData> tempGames = new ArrayList<>();
 
             if (allGames != null) {
-                for (var currGame : allGames) {
-                    for (var newGame : newGames) {
-                        if (Objects.equals(newGame.gameID(), currGame.gameID())) {
-                            tempGames.add(newGame);
-                        }
-                    }
-                }
-                for (var newGame : newGames) {
-                    boolean found = false;
-                    for (var currGame : allGames) {
-                        if (Objects.equals(newGame.gameID(), currGame.gameID())) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        tempGames.add(newGame);
-                    }
-                }
+                tempGames.addAll(findExistingGames(newGames));
+                tempGames.addAll(findNewGames(newGames));
             } else {
                 tempGames = newGames;
             }
@@ -240,6 +247,35 @@ public class Client {
         } catch (ResponseException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    private ArrayList<GameResponseData> findExistingGames(ArrayList<GameResponseData> newGames) {
+        ArrayList<GameResponseData> existing = new ArrayList<>();
+        for (var currGame : allGames) {
+            for (var newGame : newGames) {
+                if (Objects.equals(newGame.gameID(), currGame.gameID())) {
+                    existing.add(newGame);
+                }
+            }
+        }
+        return existing;
+    }
+
+    private ArrayList<GameResponseData> findNewGames(ArrayList<GameResponseData> newGames) {
+        ArrayList<GameResponseData> newList = new ArrayList<>();
+        for (var newGame : newGames) {
+            boolean found = false;
+            for (var currGame : allGames) {
+                if (Objects.equals(newGame.gameID(), currGame.gameID())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                newList.add(newGame);
+            }
+        }
+        return newList;
     }
 
     private String clearDataBase() throws ResponseException {
