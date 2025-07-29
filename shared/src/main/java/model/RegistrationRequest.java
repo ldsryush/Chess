@@ -1,4 +1,4 @@
-package handlers;
+package model;
 
 /**
  * Represents a request to register a new user.

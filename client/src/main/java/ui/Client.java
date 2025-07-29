@@ -3,8 +3,8 @@ package ui;
 import chess.ChessBoard;
 import exception.ResponseException;
 import model.*;
-import server.ServerFacade;
-import handlers.JoinGameRequest;
+import model.ServerFacade;
+import model.JoinGameRequest;
 
 import java.util.ArrayList;
 import java.util.Arrays;

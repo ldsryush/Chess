@@ -5,7 +5,7 @@ import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryAuthDAO;
 import dataaccess.mysql.MySQLAuthDAO;
 import exception.ResponseException;
-import handlers.LogoutRequest;
+import model.LogoutRequest;
 import model.AuthData;
 import model.UserData;
 import org.junit.jupiter.api.Assertions;

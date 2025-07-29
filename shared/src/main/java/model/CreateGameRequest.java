@@ -1,4 +1,4 @@
-package handlers;
+package model;
 
 /**
  * Represents a request to create a new game.

@@ -3,7 +3,7 @@ package service;
 import dataaccess.AuthDAO;
 import dataaccess.DataAccessException;
 import exception.ResponseException;
-import handlers.LogoutRequest;
+import model.LogoutRequest;
 import model.AuthData;
 
 /**

@@ -1,4 +1,4 @@
-package handlers;
+package model;
 
 /**
  * Represents a request to log in with a username and password.

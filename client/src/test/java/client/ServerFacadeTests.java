@@ -2,7 +2,7 @@ package client;
 
 import org.junit.jupiter.api.*;
 import server.Server;
-import server.ServerFacade;
+import model.ServerFacade;
 import model.UserData;
 import model.AuthData;
 import exception.ResponseException;

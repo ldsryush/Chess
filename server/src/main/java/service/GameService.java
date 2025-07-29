@@ -4,7 +4,7 @@ import chess.ChessGame;
 import dataaccess.DataAccessException;
 import dataaccess.GameDAO;
 import exception.ResponseException;
-import handlers.CreateGameRequest;
+import model.CreateGameRequest;
 import model.GameData;
 import model.GameID;
 

@@ -1,6 +1,4 @@
-package handlers;
-
-import model.GameResponseData;
+package model;
 
 import java.util.Collection;
 

@@ -7,10 +7,7 @@ import dataaccess.mysql.MySQLGameDAO;
 import dataaccess.mysql.MySQLUserDAO;
 import exception.ErrorMessage;
 import exception.ResponseException;
-import handlers.*;
-import model.AuthData;
-import model.GameID;
-import model.GameResponseData;
+import model.*;
 import service.*;
 import spark.*;
 

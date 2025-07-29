@@ -4,7 +4,7 @@ import dataaccess.AuthDAO;
 import dataaccess.DataAccessException;
 import dataaccess.UserDAO;
 import exception.ResponseException;
-import handlers.RegistrationRequest;
+import model.RegistrationRequest;
 import model.AuthData;
 import model.UserData;
 import org.mindrot.jbcrypt.BCrypt;

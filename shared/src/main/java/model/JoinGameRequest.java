@@ -1,4 +1,4 @@
-package handlers;
+package model;
 
 /**
  * Represents request to join existing games

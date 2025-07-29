@@ -1,10 +1,7 @@
-package server;
+package model;
 
 import com.google.gson.Gson;
 import exception.ResponseException;
-import handlers.CreateGameRequest;
-import handlers.JoinGameRequest;
-import model.*;
 
 import java.io.*;
 import java.net.*;

@@ -3,7 +3,7 @@ package service;
 import dataaccess.DataAccessException;
 import dataaccess.memory.MemoryGameDAO;
 import exception.ResponseException;
-import handlers.CreateGameRequest;
+import model.CreateGameRequest;
 import model.GameID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
