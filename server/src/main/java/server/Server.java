@@ -15,14 +15,14 @@ import java.util.Collection;
 
 public class Server {
 
-    private RegistrationService registrationService;
-    private LoginService loginService;
-    private LogoutService logoutService;
-    private ListService listService;
-    private JoinService joinService;
-    private GameService gameService;
-    private ClearService clearService;
-    private AuthenticationService authService;
+    private final RegistrationService registrationService;
+    private final LoginService loginService;
+    private final LogoutService logoutService;
+    private final ListService listService;
+    private final JoinService joinService;
+    private final GameService gameService;
+    private final ClearService clearService;
+    private final AuthenticationService authService;
 
     public Server() {
         try {
@@ -79,7 +79,6 @@ public class Server {
 
     private void dataExceptionHandler(DataAccessException e, Request request, Response response) {
         response.status(500);
-        // Prefix with "Error: " so the test sees the word "Error"
         String msg = "Error: " + e.getMessage();
         response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
@@ -87,11 +86,20 @@ public class Server {
     private Object registrationHandler(Request request, Response response)
             throws ResponseException, DataAccessException {
         response.type("application/json");
+
         var user = new Gson().fromJson(request.body(), RegistrationRequest.class);
+
+        if (user.username() == null || user.username().isBlank() ||
+                user.password() == null || user.password().isBlank() ||
+                user.email() == null || user.email().isBlank()) {
+            throw new ResponseException(400, "Missing required fields");
+        }
+
         AuthData authData = registrationService.registerUser(user);
         response.status(200);
         return new Gson().toJson(authData);
     }
+
 
     private Object loginUser(Request request, Response response)
             throws ResponseException, DataAccessException {
