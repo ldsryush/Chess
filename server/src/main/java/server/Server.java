@@ -74,8 +74,10 @@ public class Server {
 
     private void responseExceptionHandler(ResponseException e, Request request, Response response) {
         response.status(e.getStatusCode());
-        response.body(new Gson().toJson(new ErrorMessage(e.getMessage())));
+        String msg = "Error: " + e.getMessage();
+        response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
+
 
     private void dataExceptionHandler(DataAccessException e, Request request, Response response) {
         response.status(500);
