@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import static ui.EscapeSequences.*;
-import static ui.EscapeSequences.LINE;
 
 public class Client {
     public static State state = State.LOGGED_OUT;
