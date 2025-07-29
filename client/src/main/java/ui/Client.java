@@ -1,29 +1,32 @@
 package ui;
 
-import com.google.gson.Gson;
+import chess.ChessBoard;
 import exception.ResponseException;
-import model.AuthData;
-import model.UserData;
+import model.*;
 import server.ServerFacade;
+import handlers.JoinGameRequest;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Objects;
+
+import static ui.EscapeSequences.*;
+import static ui.EscapeSequences.LINE;
 
 public class Client {
-    private final Repl repl;
-    private State state = State.LOGGED_OUT;
-    private UserData userData;
+    public static State state = State.LOGGED_OUT;
     private final ServerFacade server;
-    private final String serverUrl;
+    private final Repl repl;
+    private ArrayList<GameResponseData> allGames;
 
     public Client(String serverUrl, Repl repl) {
         server = new ServerFacade(serverUrl);
-        this.serverUrl = serverUrl;
         this.repl = repl;
     }
 
     public String eval(String input) {
         try {
-            var tokens = input.toLowerCase().split(" ");
+            var tokens = input.split(" ");
             var cmd = (tokens.length > 0) ? tokens[0] : "help";
             var params = Arrays.copyOfRange(tokens, 1, tokens.length);
             return switch (cmd) {
@@ -32,8 +35,8 @@ public class Client {
                 case "logout" -> logout();
                 case "create" -> createGame(params);
                 case "list" -> listGames();
-                case "join" -> joinGame(params);
-                case "observe" -> observeGame(params);
+                case "join", "observe" -> joinGame(params);
+                case "cleardb" -> clearDataBase();
                 case "quit" -> "quit";
                 default -> help();
             };
@@ -43,61 +46,167 @@ public class Client {
     }
 
     public String help() {
+        String[] commands = {"create <NAME>", "list", "join <ID> [WHITE|BLACK|<empty>]", "observe <ID>", "logout", "quit", "help"};
+        String[] description = {"create a game with specified name",
+                "list all games",
+                "joins a game to play or watch",
+                "watch a game",
+                "logs you out",
+                "finished playing",
+                "list possible commands (if you're seeing this message, you don't need to use this command)"};
         if (state == State.LOGGED_OUT) {
-            return """
-                    - login <username> <password>
-                    - register <username> <password> <email>
-                    - help
-                    - quit""";
+            commands = new String[]{"register <USERNAME> <PASSWORD> <EMAIL>", "login <USERNAME> <PASSWORD>", "quit", "help"};
+            description = new String[]{"create an account", "login and play", "stop playing", "list possible commands"};
         }
-        return """
-                - create <NAME> - create a game with specified name
-                - list - list all games
-                - join <ID> [WHITE|BLACK|<empty>] - joins a game to play or watch
-                - observe <ID> - watch a game
-                - logout - logs you out
-                - quit - finished playing
-                - help - see possible commands (if you're seeing this message, you don't need to use this command)
-                """;
+        StringBuilder response = new StringBuilder();
+        for (int i = 0; i < commands.length; i++) {
+            response.append(SET_TEXT_COLOR_BLUE);
+            response.append(" - ");
+            response.append(commands[i]);
+            response.append(SET_TEXT_COLOR_MAGENTA);
+            response.append(" - ");
+            response.append(description[i]).append("\n");
+        }
+        return response.toString();
     }
 
     private String joinGame(String[] params) {
-        return null;
-    }
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
+        int idx = Integer.parseInt(params[0]);
+        try {
+            updateGames();
+            var game = allGames.get(idx - 1);
 
-    private String observeGame(String[] params) {
-        return null;
+            if (params.length == 1) {
+                try {
+                    server.joinGame(new JoinGameRequest(null, game.gameID()));
+                } catch (ResponseException e) {
+                    return "Failed to observe game, try later.";
+                }
+                BoardDisplay.main(new String[]{new ChessBoard().toString()});
+                return "";
+            } else if (params.length == 2) {
+                String color = params[1].toUpperCase();
+                if (color.equals("WHITE")) {
+                    if (game.whiteUsername() != null) {
+                        return "Can't join as white";
+                    }
+                } else if (color.equals("BLACK")) {
+                    if (game.blackUsername() != null) {
+                        return "Can't join as black";
+                    }
+                } else {
+                    return "Invalid color.";
+                }
+                try {
+                    server.joinGame(new JoinGameRequest(color, game.gameID()));
+                } catch (ResponseException e) {
+                    return "Can't join as " + color.toLowerCase();
+                }
+                BoardDisplay.main(new String[]{""});
+                return "";
+            }
+        } catch (IndexOutOfBoundsException e) {
+            return "Requested game doesn't exist";
+        }
+
+        return "Invalid input";
     }
 
     private String listGames() {
-        return null;
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
+        updateGames();
+        return buildGameList();
     }
 
     private String createGame(String[] params) {
-        return null;
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
+        String name = String.join(" ", params);
+        GameID gameID;
+        try {
+            gameID = server.createGame(new GameName(name));
+            updateGames();
+            for (int idx = 0; idx < allGames.size(); idx ++) {
+                if (allGames.get(idx).gameID() == gameID.gameID()) {
+                    return "Game " + name + " created with ID " + (idx + 1);
+                }
+            }
+            return "Error creating game, please try again";
+        } catch (ResponseException e) {
+            return "Couldn't create game with that name, try again.";
+        }
     }
 
     private String logout() {
-        return null;
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
+        state = State.LOGGED_OUT;
+        try {
+            server.logoutUser();
+        } catch (ResponseException e) {
+            return "Failed to log out";
+        }
+        return "Logged out user";
     }
 
-    private String register(String[] params) throws ResponseException {
-        if (params.length == 3) {
-            UserData userData = new UserData(params[0], params[1], params[2]);
-            AuthData authData = server.registerUser(userData);
-            state = State.LOGGED_IN;
-            return new Gson().toJson(authData);
+
+
+    private String buildGameList() {
+        StringBuilder response = new StringBuilder();
+        response.append(LINE);
+        response.append(String.format("| ID  | %-14s| %-14s| %-12s|\n", "White Player", "Black Player", "Game Name"));
+        response.append(LINE);
+        for (int idx = 0; idx < allGames.size(); idx++) {
+            var game = allGames.get(idx);
+            response.append(String.format("| %-4d| %-14s| %-14s| %-12s|\n", idx+1, game.whiteUsername(), game.blackUsername(), game.gameName()));
+            response.append(LINE);
         }
-        throw new ResponseException(400, "error: bad request");
+        return response.toString();
     }
 
-    private String login(String[] params) throws ResponseException {
-        if (params.length == 2) {
-            userData = new UserData(params[0], params[1], null);
-            AuthData authData = server.loginUser(userData);
-            state = State.LOGGED_IN;
-            return new Gson().toJson(authData);
+    private void updateGames() {
+        try {
+            var newGames = server.listGames();
+            ArrayList<GameResponseData> tempGames = new ArrayList<>();
+
+            if (allGames != null) {
+                for (var currGame : allGames) {
+                    for (var newGame : newGames) {
+                        if (Objects.equals(newGame.gameID(), currGame.gameID())) {
+                            tempGames.add(newGame);
+                        }
+                    }
+                }
+                for (var newGame : newGames) {
+                    boolean found = false;
+                    for (var currGame : allGames) {
+                        if (Objects.equals(newGame.gameID(), currGame.gameID())) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        tempGames.add(newGame);
+                    }
+                }
+            } else {
+                tempGames = newGames;
+            }
+            allGames = tempGames;
+        } catch (ResponseException e) {
+            System.out.println(e.getMessage());
         }
-        throw new ResponseException(400, "error: unauthorized");
+    }
+
+    private String clearDataBase() throws ResponseException {
+        server.clear();
+        return "Database cleared.";
     }
 }
