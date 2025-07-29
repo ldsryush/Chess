@@ -20,7 +20,7 @@ public class ServerFacade {
 
     public AuthData registerUser(UserData userData) throws ResponseException {
         var path = "/user";
-        AuthData authData = this.makeRequest("POST", path, userData, AuthData.class);
+        AuthData authData = this.makeRequest("POST", path, userData, AuthData.class, false);
         if (authData != null) {
             authToken = authData.authToken();
         }
@@ -29,7 +29,7 @@ public class ServerFacade {
 
     public AuthData loginUser(UserData userData) throws ResponseException {
         var path = "/session";
-        AuthData authData = this.makeRequest("POST", path, userData, AuthData.class);
+        AuthData authData = this.makeRequest("POST", path, userData, AuthData.class, false);
         if (authData != null) {
             authToken = authData.authToken();
         }
@@ -38,42 +38,44 @@ public class ServerFacade {
 
     public void logoutUser() throws ResponseException {
         var path = "/session";
-        this.makeRequest("DELETE", path, null, null);
+        this.makeRequest("DELETE", path, null, null, true);
         authToken = null;
     }
 
     public void joinGame(JoinGameRequest request) throws ResponseException {
         var path = "/game";
-        this.makeRequest("PUT", path, request, null);
+        this.makeRequest("PUT", path, request, null, true);
     }
 
     public GameID createGame(GameName name) throws ResponseException {
         var path = "/game";
-        String playerColor = "RED";  // Default color
-        var request = new CreateGameRequest(name.name(), playerColor);
-        return this.makeRequest("POST", path, request, GameID.class);
+        var request = new CreateGameRequest(name.name(), "RED");
+        return this.makeRequest("POST", path, request, GameID.class, true);
     }
 
     public ArrayList<GameResponseData> listGames() throws ResponseException {
         var path = "/game";
-        GameResponseList response = this.makeRequest("GET", path, null, GameResponseList.class);
+        GameResponseList response = this.makeRequest("GET", path, null, GameResponseList.class, true);
         return response.games();
     }
 
     public void clear() throws ResponseException {
         var path = "/db";
-        this.makeRequest("DELETE", path, null, null);
+        this.makeRequest("DELETE", path, null, null, true);
     }
 
-    private <T> T makeRequest(String method, String path, Object request, Class<T> responseClass) throws ResponseException {
+    // Primary request method with auth toggle
+    private <T> T makeRequest(String method, String path, Object request, Class<T> responseClass, boolean requiresAuth) throws ResponseException {
         try {
             URL url = new URI(serverUrl + path).toURL();
             HttpURLConnection http = (HttpURLConnection) url.openConnection();
             http.setRequestMethod(method);
             http.setDoOutput(true);
-            if (authToken != null) {
+
+            if (requiresAuth && authToken != null) {
                 http.setRequestProperty("authorization", authToken);
             }
+
             writeBody(request, http);
             http.connect();
             throwIfNotSuccessful(http);
@@ -83,9 +85,13 @@ public class ServerFacade {
         }
     }
 
+    private <T> T makeRequest(String method, String path, Object request, Class<T> responseClass) throws ResponseException {
+        return makeRequest(method, path, request, responseClass, true);
+    }
+
     private void writeBody(Object request, HttpURLConnection http) throws IOException {
         if (request != null) {
-            http.addRequestProperty("Content-Type", "application/json");
+            http.setRequestProperty("Content-Type", "application/json");
             String reqData = new Gson().toJson(request);
             try (OutputStream reqBody = http.getOutputStream()) {
                 reqBody.write(reqData.getBytes());
