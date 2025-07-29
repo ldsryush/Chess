@@ -156,7 +156,41 @@ public class Client {
         return "Logged out user";
     }
 
+    private String register(String[] params) {
+        if (state == State.LOGGED_IN) {
+            return "Must logout first";
+        }
+        if (params.length == 3) {
+            UserData userData = new UserData(params[0], params[1], params[2]);
+            AuthData authData;
+            try {
+                authData = server.registerUser(userData);
+            } catch (ResponseException e) {
+                return "Invalid credentials";
+            }
+            state = State.LOGGED_IN;
+            return "Logged in as " + authData.username();
+        }
+        return "Invalid credentials";
+    }
 
+    private String login(String[] params) {
+        if (state == State.LOGGED_IN) {
+            return "Must logout first";
+        }
+        if (params.length == 2) {
+            UserData userData = new UserData(params[0], params[1], null);
+            AuthData authData;
+            try {
+                authData = server.loginUser(userData);
+            } catch (ResponseException e) {
+                return "Invalid login";
+            }
+            state = State.LOGGED_IN;
+            return "Logged in as " + authData.username();
+        }
+        return "Invalid credentials";
+    }
 
     private String buildGameList() {
         StringBuilder response = new StringBuilder();
