@@ -35,20 +35,20 @@ public class ServerFacadeTests {
         Assertions.assertEquals("testUser", auth.username());
     }
     @Test
-    void registerUser_positive() throws ResponseException {
+    void registerUserPositive() throws ResponseException {
         var user = new UserData("regUser", "pass", "email@example.com");
         var auth = facade.registerUser(user);
         Assertions.assertEquals("regUser", auth.username());
     }
 
     @Test
-    void registerUser_negative() {
+    void registerUserNegative() {
         var user = new UserData("", "", "bad email");
         Assertions.assertThrows(ResponseException.class, () -> facade.registerUser(user));
     }
 
     @Test
-    void loginUser_positive() throws ResponseException {
+    void loginUserPositive() throws ResponseException {
         var user = new UserData("loginUser", "pass", "email@example.com");
         facade.registerUser(user);
         var auth = facade.loginUser(user);
@@ -56,13 +56,13 @@ public class ServerFacadeTests {
     }
 
     @Test
-    void loginUser_negative() {
+    void loginUserNegative() {
         var user = new UserData("unknown", "wrong", "x@example.com");
         Assertions.assertThrows(ResponseException.class, () -> facade.loginUser(user));
     }
 
     @Test
-    void logoutUser_positive() throws ResponseException {
+    void logoutUserPositive() throws ResponseException {
         var user = new UserData("logoutUser", "pass", "e@example.com");
         facade.registerUser(user);
         facade.loginUser(user);
@@ -70,34 +70,42 @@ public class ServerFacadeTests {
     }
 
     @Test
-    void logoutUser_negative() {
+    void logoutUserNegative() {
         Assertions.assertThrows(ResponseException.class, () -> facade.logoutUser());
     }
 
     @Test
-    void createGame_positive() throws ResponseException {
+    void createGamePositive() throws ResponseException {
+        facade.clear(); // reset DB (if safe to run here)
+        var user = new UserData("gameUser", "pass", "game@example.com");
+        facade.registerUser(user);
+        facade.loginUser(user); // ensure valid auth
+
         var gameID = facade.createGame(new GameName("Battle of Wits"));
         Assertions.assertNotNull(gameID);
     }
 
     @Test
-    void createGame_negative() {
+    void createGameNegative() {
         Assertions.assertThrows(ResponseException.class, () -> facade.createGame(new GameName("")));
     }
 
     @Test
-    void listGames_positive() throws ResponseException {
+    void listGamesPositive() throws ResponseException {
         var games = facade.listGames();
         Assertions.assertNotNull(games);
     }
 
     @Test
-    void listGames_negative() {
+    void listGamesNegative() {
+        facade = new ServerFacade("http://localhost:" + server.port());
+
         Assertions.assertThrows(ResponseException.class, () -> facade.listGames());
     }
 
+
     @Test
-    void joinGame_positive() throws ResponseException {
+    void joinGamePositive() throws ResponseException {
         var auth = facade.registerUser(new UserData("joinUser", "pass", "e@x.com"));
         var gameID = facade.createGame(new GameName("Tactical Showdown"));
         var request = new JoinGameRequest("WHITE", gameID.gameID());
@@ -105,13 +113,13 @@ public class ServerFacadeTests {
     }
 
     @Test
-    void joinGame_negative() throws ResponseException {
+    void joinGameNegative() throws ResponseException {
         var request = new JoinGameRequest("WHITE", 9999); // Invalid game ID
         Assertions.assertThrows(ResponseException.class, () -> facade.joinGame(request));
     }
 
     @Test
-    void clear_positive() throws ResponseException {
+    void clearPositive() throws ResponseException {
         var user = new UserData("clearUser", "pass", "clear@example.com");
         facade.registerUser(user);
         facade.loginUser(user);
@@ -126,7 +134,7 @@ public class ServerFacadeTests {
 
 
     @Test
-    void clear_negative() throws ResponseException {
+    void clearNegative() throws ResponseException {
         facade.clear();
         facade.clear();
     }
