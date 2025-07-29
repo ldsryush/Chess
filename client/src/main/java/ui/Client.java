@@ -45,68 +45,53 @@ public class Client {
     }
 
     public String help() {
-        String[] commands = {"create <NAME>", "list", "join <ID> [WHITE|BLACK|<empty>]", "observe <ID>", "logout", "quit", "help"};
-        String[] description = {"create a game with specified name",
+        String[] commands = {
+                "create <NAME>", "list", "join <ID> [WHITE|BLACK|<empty>]",
+                "observe <ID>", "logout", "quit", "help"
+        };
+        String[] description = {
+                "create a game with specified name",
                 "list all games",
                 "joins a game to play or watch",
                 "watch a game",
                 "logs you out",
                 "finished playing",
-                "list possible commands (if you're seeing this message, you don't need to use this command)"};
+                "list possible commands (if you're seeing this message, you don't need to use this command)"
+        };
+
         if (state == State.LOGGED_OUT) {
-            commands = new String[]{"register <USERNAME> <PASSWORD> <EMAIL>", "login <USERNAME> <PASSWORD>", "quit", "help"};
-            description = new String[]{"create an account", "login and play", "stop playing", "list possible commands"};
+            commands = new String[] {
+                    "register <USERNAME> <PASSWORD> <EMAIL>",
+                    "login <USERNAME> <PASSWORD>",
+                    "quit", "help"
+            };
+            description = new String[] {
+                    "create an account", "login and play", "stop playing", "list possible commands"
+            };
         }
+
         StringBuilder response = new StringBuilder();
         for (int i = 0; i < commands.length; i++) {
-            response.append(SET_TEXT_COLOR_BLUE);
-            response.append(" - ");
-            response.append(commands[i]);
-            response.append(SET_TEXT_COLOR_MAGENTA);
-            response.append(" - ");
-            response.append(description[i]).append("\n");
+            response.append(SET_TEXT_COLOR_BLUE)
+                    .append(" - ")
+                    .append(commands[i])
+                    .append(SET_TEXT_COLOR_MAGENTA)
+                    .append(" - ")
+                    .append(description[i])
+                    .append("\n");
         }
         return response.toString();
     }
 
     private String joinGame(String[] params) {
-        if (state == State.LOGGED_OUT) {
-            return "Must login first";
-        }
+        if (state == State.LOGGED_OUT) return "Must login first";
         int idx = Integer.parseInt(params[0]);
+
         try {
             updateGames();
             var game = allGames.get(idx - 1);
-
-            if (params.length == 1) {
-                try {
-                    server.joinGame(new JoinGameRequest(null, game.gameID()));
-                } catch (ResponseException e) {
-                    return "Failed to observe game, try later.";
-                }
-                BoardDisplay.main(new String[]{new ChessBoard().toString()});
-                return "";
-            } else if (params.length == 2) {
-                String color = params[1].toUpperCase();
-                if (color.equals("WHITE")) {
-                    if (game.whiteUsername() != null) {
-                        return "Can't join as white";
-                    }
-                } else if (color.equals("BLACK")) {
-                    if (game.blackUsername() != null) {
-                        return "Can't join as black";
-                    }
-                } else {
-                    return "Invalid color.";
-                }
-                try {
-                    server.joinGame(new JoinGameRequest(color, game.gameID()));
-                } catch (ResponseException e) {
-                    return "Can't join as " + color.toLowerCase();
-                }
-                BoardDisplay.main(new String[]{""});
-                return "";
-            }
+            if (params.length == 1) return observeGame(game);
+            if (params.length == 2) return joinGameWithColor(params[1], game);
         } catch (IndexOutOfBoundsException e) {
             return "Requested game doesn't exist";
         }
@@ -114,24 +99,47 @@ public class Client {
         return "Invalid input";
     }
 
-    private String listGames() {
-        if (state == State.LOGGED_OUT) {
-            return "Must login first";
+    private String observeGame(GameResponseData game) {
+        try {
+            server.joinGame(new JoinGameRequest(null, game.gameID()));
+        } catch (ResponseException e) {
+            return "Failed to observe game, try later.";
         }
+        BoardDisplay.main(new String[]{new ChessBoard().toString()});
+        return "";
+    }
+
+    private String joinGameWithColor(String colorParam, GameResponseData game) {
+        String color = colorParam.toUpperCase();
+
+        if (color.equals("WHITE") && game.whiteUsername() != null) return "Can't join as white";
+        if (color.equals("BLACK") && game.blackUsername() != null) return "Can't join as black";
+        if (!color.equals("WHITE") && !color.equals("BLACK")) return "Invalid color.";
+
+        try {
+            server.joinGame(new JoinGameRequest(color, game.gameID()));
+        } catch (ResponseException e) {
+            return "Can't join as " + color.toLowerCase();
+        }
+
+        BoardDisplay.main(new String[]{""});
+        return "";
+    }
+
+    private String listGames() {
+        if (state == State.LOGGED_OUT) return "Must login first";
         updateGames();
         return buildGameList();
     }
 
     private String createGame(String[] params) {
-        if (state == State.LOGGED_OUT) {
-            return "Must login first";
-        }
+        if (state == State.LOGGED_OUT) return "Must login first";
         String name = String.join(" ", params);
         GameID gameID;
         try {
             gameID = server.createGame(new GameName(name));
             updateGames();
-            for (int idx = 0; idx < allGames.size(); idx ++) {
+            for (int idx = 0; idx < allGames.size(); idx++) {
                 if (allGames.get(idx).gameID() == gameID.gameID()) {
                     return "Game " + name + " created with ID " + (idx + 1);
                 }
@@ -143,9 +151,7 @@ public class Client {
     }
 
     private String logout() {
-        if (state == State.LOGGED_OUT) {
-            return "Must login first";
-        }
+        if (state == State.LOGGED_OUT) return "Must login first";
         state = State.LOGGED_OUT;
         try {
             server.logoutUser();
@@ -156,9 +162,7 @@ public class Client {
     }
 
     private String register(String[] params) {
-        if (state == State.LOGGED_IN) {
-            return "Must logout first";
-        }
+        if (state == State.LOGGED_IN) return "Must logout first";
         if (params.length == 3) {
             UserData userData = new UserData(params[0], params[1], params[2]);
             AuthData authData;
@@ -174,9 +178,7 @@ public class Client {
     }
 
     private String login(String[] params) {
-        if (state == State.LOGGED_IN) {
-            return "Must logout first";
-        }
+        if (state == State.LOGGED_IN) return "Must logout first";
         if (params.length == 2) {
             UserData userData = new UserData(params[0], params[1], null);
             AuthData authData;
@@ -194,11 +196,13 @@ public class Client {
     private String buildGameList() {
         StringBuilder response = new StringBuilder();
         response.append(LINE);
-        response.append(String.format("| ID  | %-14s| %-14s| %-12s|\n", "White Player", "Black Player", "Game Name"));
+        response.append(String.format("| ID  | %-14s| %-14s| %-12s|\n",
+                "White Player", "Black Player", "Game Name"));
         response.append(LINE);
         for (int idx = 0; idx < allGames.size(); idx++) {
             var game = allGames.get(idx);
-            response.append(String.format("| %-4d| %-14s| %-14s| %-12s|\n", idx+1, game.whiteUsername(), game.blackUsername(), game.gameName()));
+            response.append(String.format("| %-4d| %-14s| %-14s| %-12s|\n",
+                    idx + 1, game.whiteUsername(), game.blackUsername(), game.gameName()));
             response.append(LINE);
         }
         return response.toString();
