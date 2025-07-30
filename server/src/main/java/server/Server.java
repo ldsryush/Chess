@@ -55,6 +55,7 @@ public class Server {
         Spark.get("/game", this::getGames);
         Spark.post("/game", this::createGame);
         Spark.put("/game", this::joinGame);
+        Spark.put("/game/observe/:gameID", this::observeGame); // ✅ NEW OBSERVE ROUTE
         Spark.delete("/db", this::clearApp);
 
         Spark.exception(ResponseException.class, this::responseExceptionHandler);
@@ -78,7 +79,6 @@ public class Server {
         response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
 
-
     private void dataExceptionHandler(DataAccessException e, Request request, Response response) {
         response.status(500);
         String msg = "Error: " + e.getMessage();
@@ -101,7 +101,6 @@ public class Server {
         response.status(200);
         return new Gson().toJson(authData);
     }
-
 
     private Object loginUser(Request request, Response response)
             throws ResponseException, DataAccessException {
@@ -155,6 +154,19 @@ public class Server {
     private Object clearApp(Request request, Response response)
             throws ResponseException, DataAccessException {
         clearService.clearDatabase();
+        response.status(200);
+        return "{}";
+    }
+
+    private Object observeGame(Request request, Response response)
+            throws ResponseException, DataAccessException {
+        var authToken = request.headers("authorization");
+        authService.authenticate(authToken);
+        AuthData authData = authService.getAuthData(authToken);
+
+        int gameID = Integer.parseInt(request.params(":gameID"));
+        joinService.observeGame(gameID, authData); // ← You’ll need to implement this in JoinService
+
         response.status(200);
         return "{}";
     }

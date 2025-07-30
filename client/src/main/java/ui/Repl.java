@@ -14,7 +14,7 @@ public class Repl {
 
     public void run() {
         System.out.print(SET_BG_COLOR_WHITE);
-        System.out.println("👑 Welcome to 240 Chess. Type Help to get started. 👑");
+        System.out.println("Welcome to 240 Chess. Type Help to get started.");
         System.out.print(client.help());
 
         Scanner scanner = new Scanner(System.in);

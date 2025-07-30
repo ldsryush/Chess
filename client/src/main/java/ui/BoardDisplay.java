@@ -22,30 +22,22 @@ public class BoardDisplay {
 
     public static void main(String[] args) {
         var out = new PrintStream(System.out, true, StandardCharsets.UTF_8);
-
         out.print(ERASE_SCREEN);
 
-        drawHeadersForward(out);
-        drawChessBoardForward(out);
-        drawHeadersForward(out);
-        out.println(SET_BG_COLOR_WHITE);
-        drawHeadersBackward(out);
-        drawChessBoardBackward(out);
-        drawHeadersBackward(out);
+        String playerColor = args.length > 0 ? args[0].toUpperCase() : "WHITE";
+
+        if (playerColor.equals("BLACK")) {
+            drawHeadersBackward(out);
+            drawChessBoardBackward(out);
+            drawHeadersBackward(out);
+        } else {
+            drawHeadersForward(out);
+            drawChessBoardForward(out);
+            drawHeadersForward(out);
+        }
+
         out.print(SET_BG_COLOR_WHITE);
         out.print(SET_TEXT_COLOR_WHITE);
-    }
-
-    private static void drawHeadersBackward(PrintStream out) {
-        setBlack(out);
-        out.print(SET_BG_COLOR_LIGHT_GREY);
-        out.print(EMPTY.repeat(LINE_WIDTH_IN_CHARS));
-        for (int boardCol = 0; boardCol < BOARD_SIZE_IN_SQUARES; ++boardCol) {
-            printHeaderText(out, HEADERS[BOARD_SIZE_IN_SQUARES - boardCol - 1]);
-        }
-        out.print(SET_BG_COLOR_LIGHT_GREY);
-        out.print(EMPTY.repeat(LINE_WIDTH_IN_CHARS));
-        out.println(SET_BG_COLOR_WHITE);
     }
 
     private static void drawHeadersForward(PrintStream out) {
@@ -54,6 +46,18 @@ public class BoardDisplay {
         out.print(EMPTY.repeat(LINE_WIDTH_IN_CHARS));
         for (int boardCol = 0; boardCol < BOARD_SIZE_IN_SQUARES; ++boardCol) {
             printHeaderText(out, HEADERS[boardCol]);
+        }
+        out.print(SET_BG_COLOR_LIGHT_GREY);
+        out.print(EMPTY.repeat(LINE_WIDTH_IN_CHARS));
+        out.println(SET_BG_COLOR_WHITE);
+    }
+
+    private static void drawHeadersBackward(PrintStream out) {
+        setBlack(out);
+        out.print(SET_BG_COLOR_LIGHT_GREY);
+        out.print(EMPTY.repeat(LINE_WIDTH_IN_CHARS));
+        for (int boardCol = 0; boardCol < BOARD_SIZE_IN_SQUARES; ++boardCol) {
+            printHeaderText(out, HEADERS[BOARD_SIZE_IN_SQUARES - boardCol - 1]);
         }
         out.print(SET_BG_COLOR_LIGHT_GREY);
         out.print(EMPTY.repeat(LINE_WIDTH_IN_CHARS));
