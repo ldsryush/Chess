@@ -1,8 +1,12 @@
 package websocket;
 
-import model.ServerMessage;
+import com.google.gson.Gson;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
+import websocket.commands.UserGameCommand;
+import websocket.messages.*;
+
+import chess.ChessGame;
 
 import java.io.IOException;
 import java.util.Map;
@@ -13,91 +17,112 @@ public class WebSocketHandler {
 
     private final ConnectionManager connectionManager = new ConnectionManager();
     private final Map<Session, ClientConnection> sessionMap = new ConcurrentHashMap<>();
+    private final Gson gson = new Gson();
 
     @OnWebSocketConnect
     public void onConnect(Session session) {
-        System.out.println("Client connected: " + session.getRemoteAddress());
+        System.out.println("🔌 Client connected: " + session.getRemoteAddress());
     }
 
     @OnWebSocketMessage
-    public void onMessage(Session session, String message) {
-        System.out.println("Received message: " + message);
+    public void onMessage(Session session, String json) {
+        System.out.println("📨 Received message: " + json);
 
-        ServerMessage msg = parseMessage(message);
+        try {
+            UserGameCommand command = gson.fromJson(json, UserGameCommand.class);
+            ClientConnection connection = sessionMap.get(session);
 
-        switch (msg.getType()) {
-            case "CONNECT":
-                handleConnect(session, msg);
-                break;
-            case "MOVE":
-            case "CHAT":
-                handleBroadcast(session, msg);
-                break;
-            case "RESIGN":
-            case "LEAVE":
-                handleDisconnect(session);
-                break;
-            default:
-                System.err.println("Unknown message type: " + msg.getType());
+            switch (command.getCommandType()) {
+                case CONNECT -> handleConnect(session, command);
+                case MAKE_MOVE -> handleMove(connection, command);
+                case RESIGN -> handleResign(connection, command);
+                case LEAVE -> handleLeave(connection);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to parse command: " + e.getMessage());
+            try {
+                session.getRemote().sendString("Invalid command format");
+            } catch (IOException ioException) {
+                System.err.println("Failed to send error message: " + ioException.getMessage());
+            }
         }
     }
 
     @OnWebSocketClose
     public void onClose(Session session, int statusCode, String reason) {
-        System.out.println("Client disconnected: " + reason);
-        handleDisconnect(session);
+        System.out.println("🔌 Client disconnected: " + reason);
+        handleLeave(sessionMap.get(session));
+        sessionMap.remove(session);
     }
 
     @OnWebSocketError
     public void onError(Session session, Throwable error) {
-        System.err.println("WebSocket error: " + error.getMessage());
-        handleDisconnect(session);
+        System.err.println("⚠️ WebSocket error: " + error.getMessage());
+        handleLeave(sessionMap.get(session));
+        sessionMap.remove(session);
     }
 
-    private ServerMessage parseMessage(String json) {
-        try {
-            return new com.google.gson.Gson().fromJson(json, ServerMessage.class);
-        } catch (Exception e) {
-            System.err.println("Failed to parse message: " + e.getMessage());
-            return new ServerMessage("ERROR", "Invalid message format");
-        }
-    }
-
-    private void handleConnect(Session session, ServerMessage msg) {
-        String userName = msg.getPayload(); // assuming payload contains username
-        int gameID = extractGameIDFromSession(session); // implement this as needed
-
-        ClientConnection connection = new ClientConnection(userName, session);
+    private void handleConnect(Session session, UserGameCommand command) {
+        ClientConnection connection = new ClientConnection(command.getAuthToken(), session);
         sessionMap.put(session, connection);
-        connectionManager.addConnection(gameID, connection);
+        connectionManager.addConnection(command.getGameID(), connection);
 
-        ServerMessage joinMsg = new ServerMessage("JOIN", userName + " joined game " + gameID);
-        connectionManager.broadcastToOthers(gameID, connection, joinMsg);
+        // Stubbed game object — replace with actual game retrieval
+        ChessGame game = new ChessGame();
+        LoadGameMessage loadGame = new LoadGameMessage(game, command.getAuthToken());
+        connection.send(loadGame);
+
+        NotificationMessage joinMsg = new NotificationMessage(command.getAuthToken() + " joined game " + command.getGameID());
+        connectionManager.broadcastToOthers(command.getGameID(), connection, joinMsg);
     }
 
-    private void handleBroadcast(Session session, ServerMessage msg) {
-        ClientConnection sender = sessionMap.get(session);
-        if (sender == null) return;
+    private void handleMove(ClientConnection connection, UserGameCommand command) {
+        if (connection == null) return;
 
-        Integer gameID = connectionManager.getGameID(sender);
-        if (gameID != null) {
-            connectionManager.broadcastToOthers(gameID, sender, msg);
-        }
-    }
+        int gameID = connectionManager.getGameID(connection);
 
-    private void handleDisconnect(Session session) {
-        ClientConnection connection = sessionMap.remove(session);
-        if (connection != null) {
-            connectionManager.removeConnection(connection);
-            Integer gameID = connectionManager.getGameID(connection);
-            if (gameID != null) {
-                ServerMessage leaveMsg = new ServerMessage("LEAVE", connection.getUserName() + " left game " + gameID);
-                connectionManager.broadcastToGame(gameID, leaveMsg);
+        // Stubbed move validation — replace with actual logic
+        boolean valid = true;
+        boolean checkmate = false;
+
+        if (valid) {
+            ChessGame updatedGame = new ChessGame(); // Replace with updated game state
+            LoadGameMessage update = new LoadGameMessage(updatedGame, connection.getUserName());
+            connectionManager.broadcastToGame(gameID, update);
+
+            if (checkmate) {
+                NotificationMessage notify = new NotificationMessage("Checkmate!");
+                connectionManager.broadcastToGame(gameID, notify);
             }
+        } else {
+            ErrorMessage error = new ErrorMessage("Invalid move");
+            connection.send(error);
         }
     }
 
-    private int extractGameIDFromSession(Session session) {
-        return 1;
+    private void handleResign(ClientConnection connection, UserGameCommand command) {
+        if (connection == null) return;
+
+        int gameID = connectionManager.getGameID(connection);
+
+        // Stubbed resign logic — replace with actual game state check
+        boolean alreadyResigned = false;
+
+        if (alreadyResigned) {
+            connection.send(new ErrorMessage("You already resigned"));
+        } else {
+            NotificationMessage notify = new NotificationMessage(connection.getUserName() + " resigned");
+            connectionManager.broadcastToGame(gameID, notify);
+        }
+    }
+
+    private void handleLeave(ClientConnection connection) {
+        if (connection == null) return;
+
+        int gameID = connectionManager.getGameID(connection);
+        connectionManager.removeConnection(connection);
+
+        NotificationMessage leaveMsg = new NotificationMessage(connection.getUserName() + " left game " + gameID);
+        connectionManager.broadcastToGame(gameID, leaveMsg);
     }
 }
