@@ -1,6 +1,8 @@
 package websocket;
 
+import com.google.gson.Gson;
 import org.eclipse.jetty.websocket.api.Session;
+import websocket.messages.ServerMessage;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -8,6 +10,7 @@ import java.util.Objects;
 public class ClientConnection {
     private final String userName;
     private final Session session;
+    private static final Gson gson = new Gson();
 
     public ClientConnection(String userName, Session session) {
         this.userName = userName;
@@ -22,6 +25,9 @@ public class ClientConnection {
         return session != null && session.isOpen();
     }
 
+    /**
+     * Sends a raw JSON string to the client.
+     */
     public void send(String message) {
         if (isOpen()) {
             try {
@@ -32,6 +38,14 @@ public class ClientConnection {
         } else {
             System.err.println("Session closed for " + userName + ", message not sent.");
         }
+    }
+
+    /**
+     * Sends a structured ServerMessage to the client.
+     */
+    public void send(ServerMessage message) {
+        String json = gson.toJson(message);
+        send(json);
     }
 
     @Override

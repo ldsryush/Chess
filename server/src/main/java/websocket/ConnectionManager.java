@@ -1,15 +1,14 @@
 package websocket;
 
+import websocket.messages.ServerMessage;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import com.google.gson.Gson;
-import model.ServerMessage;
 
 public class ConnectionManager {
 
     private final Map<Integer, List<ClientConnection>> gameConnections = new ConcurrentHashMap<>();
     private final Map<ClientConnection, Integer> connectionToGame = new ConcurrentHashMap<>();
-    private final Gson gson = new Gson();
 
     public void addConnection(int gameID, ClientConnection connection) {
         gameConnections
@@ -35,10 +34,13 @@ public class ConnectionManager {
         List<ClientConnection> connections = gameConnections.get(gameID);
         if (connections == null) return;
 
-        String json = gson.toJson(message);
         synchronized (connections) {
             for (ClientConnection connection : connections) {
-                sendMessage(connection, json);
+                if (connection.isOpen()) {
+                    connection.send(message);
+                } else {
+                    System.err.println("Connection closed: unable to send message to " + connection.getUserName());
+                }
             }
         }
     }
@@ -47,21 +49,12 @@ public class ConnectionManager {
         List<ClientConnection> connections = gameConnections.get(gameID);
         if (connections == null) return;
 
-        String json = gson.toJson(message);
         synchronized (connections) {
             for (ClientConnection connection : connections) {
-                if (!connection.equals(sender)) {
-                    sendMessage(connection, json);
+                if (!connection.equals(sender) && connection.isOpen()) {
+                    connection.send(message);
                 }
             }
-        }
-    }
-
-    private void sendMessage(ClientConnection connection, String json) {
-        if (connection.isOpen()) {
-            connection.send(json);
-        } else {
-            System.err.println("Connection closed: unable to send message.");
         }
     }
 
