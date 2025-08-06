@@ -10,6 +10,7 @@ import exception.ResponseException;
 import model.*;
 import service.*;
 import spark.*;
+import websocket.WebSocketHandler;
 
 import java.util.Collection;
 
@@ -47,20 +48,25 @@ public class Server {
     public int run(int desiredPort) {
         Spark.port(desiredPort);
         Spark.staticFiles.location("web");
-        Spark.init();
 
+        //Register WebSocket route
+        WebSocketHandler handler = new WebSocketHandler(gameService, authService, joinService);
+        Spark.webSocket("/ws", handler);
+
+        //Register HTTP routes
         Spark.post("/user", this::registrationHandler);
         Spark.post("/session", this::loginUser);
         Spark.delete("/session", this::logoutUser);
         Spark.get("/game", this::getGames);
         Spark.post("/game", this::createGame);
         Spark.put("/game", this::joinGame);
-        Spark.put("/game/observe/:gameID", this::observeGame); // ✅ NEW OBSERVE ROUTE
+        Spark.put("/game/observe/:gameID", this::observeGame);
         Spark.delete("/db", this::clearApp);
 
         Spark.exception(ResponseException.class, this::responseExceptionHandler);
         Spark.exception(DataAccessException.class, this::dataExceptionHandler);
 
+        Spark.init();
         Spark.awaitInitialization();
         return Spark.port();
     }
@@ -73,6 +79,7 @@ public class Server {
         Spark.stop();
     }
 
+
     private void responseExceptionHandler(ResponseException e, Request request, Response response) {
         response.status(e.getStatusCode());
         String msg = "Error: " + e.getMessage();
@@ -84,6 +91,7 @@ public class Server {
         String msg = "Error: " + e.getMessage();
         response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
+
 
     private Object registrationHandler(Request request, Response response)
             throws ResponseException, DataAccessException {
@@ -165,7 +173,7 @@ public class Server {
         AuthData authData = authService.getAuthData(authToken);
 
         int gameID = Integer.parseInt(request.params(":gameID"));
-        joinService.observeGame(gameID, authData); // ← You’ll need to implement this in JoinService
+        joinService.observeGame(gameID, authData);
 
         response.status(200);
         return "{}";
