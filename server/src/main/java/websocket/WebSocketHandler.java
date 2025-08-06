@@ -67,7 +67,7 @@ public class WebSocketHandler {
 
     @OnWebSocketError
     public void onError(Session session, Throwable error) {
-        System.err.println("⚠WebSocket error: " + error.getMessage());
+        System.err.println("WebSocket error: " + error.getMessage());
         handleLeave(sessionMap.get(session));
         sessionMap.remove(session);
     }
@@ -85,8 +85,10 @@ public class WebSocketHandler {
             sessionMap.put(session, connection);
             connectionManager.addConnection(command.getGameID(), connection);
 
-            ChessGame game = gameService.getGameData(command.getGameID()).game();
-            LoadGameMessage loadGame = new LoadGameMessage(game, username);
+            var gameData = gameService.getGameData(command.getGameID());
+            String playerColor = username.equals(gameData.whiteUsername()) ? "WHITE" : "BLACK";
+
+            LoadGameMessage loadGame = new LoadGameMessage(gameData.game(), playerColor);
             connection.send(loadGame);
 
             NotificationMessage joinMsg = new NotificationMessage(username + " joined game " + command.getGameID());
