@@ -4,10 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="fixed autograder fails.">
+    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="updated handleConnect">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/test/java/passoff/server/WebSocketTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/test/java/passoff/server/WebSocketTests.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -260,7 +258,15 @@
       <option name="project" value="LOCAL" />
       <updated>1754517819754</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="updated handleConnect">
+      <option name="closed" value="true" />
+      <created>1754519227039</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1754519227039</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -279,6 +285,7 @@
     <MESSAGE value="update handler" />
     <MESSAGE value="fixed autograder fails" />
     <MESSAGE value="fixed autograder fails." />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed autograder fails." />
+    <MESSAGE value="updated handleConnect" />
+    <option name="LAST_COMMIT_MESSAGE" value="updated handleConnect" />
   </component>
 </project>
