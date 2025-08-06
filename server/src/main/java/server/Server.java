@@ -9,7 +9,7 @@ import exception.ErrorMessage;
 import exception.ResponseException;
 import model.*;
 import service.*;
-import spark.*;
+import spark.Spark;
 import websocket.WebSocketHandler;
 
 import java.util.Collection;
@@ -32,13 +32,13 @@ public class Server {
             UserDAO userDAO = new MySQLUserDAO();
 
             registrationService = new RegistrationService(userDAO, authDAO);
-            loginService = new LoginService(userDAO, authDAO);
-            logoutService = new LogoutService(authDAO);
-            listService = new ListService(gameDAO);
-            joinService = new JoinService(gameDAO);
-            gameService = new GameService(gameDAO);
-            clearService = new ClearService(userDAO, authDAO, gameDAO);
-            authService = new AuthenticationService(authDAO);
+            loginService        = new LoginService(userDAO, authDAO);
+            logoutService       = new LogoutService(authDAO);
+            listService         = new ListService(gameDAO);
+            joinService         = new JoinService(gameDAO);
+            gameService         = new GameService(gameDAO);
+            clearService        = new ClearService(userDAO, authDAO, gameDAO);
+            authService         = new AuthenticationService(authDAO);
         } catch (ResponseException ex) {
             System.out.printf("Unable to connect to database: %s%n", ex.getMessage());
             throw new RuntimeException("Server initialization failed by database error", ex);
@@ -49,22 +49,24 @@ public class Server {
         Spark.port(desiredPort);
         Spark.staticFiles.location("web");
 
-        //Register WebSocket route
-        WebSocketHandler handler = new WebSocketHandler(gameService, authService, joinService);
-        Spark.webSocket("/ws", handler);
+        // inject dependencies into your WebSocket handler
+        WebSocketHandler.configure(gameService, authService, joinService);
 
-        //Register HTTP routes
-        Spark.post("/user", this::registrationHandler);
-        Spark.post("/session", this::loginUser);
-        Spark.delete("/session", this::logoutUser);
-        Spark.get("/game", this::getGames);
-        Spark.post("/game", this::createGame);
-        Spark.put("/game", this::joinGame);
-        Spark.put("/game/observe/:gameID", this::observeGame);
-        Spark.delete("/db", this::clearApp);
+        // register WebSocket by handler class (Spark will use its no-arg ctor)
+        Spark.webSocket("/ws", WebSocketHandler.class);
+
+        // HTTP routes
+        Spark.post("/user",                  this::registrationHandler);
+        Spark.post("/session",               this::loginUser);
+        Spark.delete("/session",             this::logoutUser);
+        Spark.get("/game",                   this::getGames);
+        Spark.post("/game",                  this::createGame);
+        Spark.put("/game",                   this::joinGame);
+        Spark.put("/game/observe/:gameID",   this::observeGame);
+        Spark.delete("/db",                  this::clearApp);
 
         Spark.exception(ResponseException.class, this::responseExceptionHandler);
-        Spark.exception(DataAccessException.class, this::dataExceptionHandler);
+        Spark.exception(DataAccessException.class,  this::dataExceptionHandler);
 
         Spark.init();
         Spark.awaitInitialization();
@@ -79,29 +81,26 @@ public class Server {
         Spark.stop();
     }
 
-
-    private void responseExceptionHandler(ResponseException e, Request request, Response response) {
+    private void responseExceptionHandler(ResponseException e, spark.Request request, spark.Response response) {
         response.status(e.getStatusCode());
         String msg = "Error: " + e.getMessage();
         response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
 
-    private void dataExceptionHandler(DataAccessException e, Request request, Response response) {
+    private void dataExceptionHandler(DataAccessException e, spark.Request request, spark.Response response) {
         response.status(500);
         String msg = "Error: " + e.getMessage();
         response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
 
-
-    private Object registrationHandler(Request request, Response response)
+    private Object registrationHandler(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         response.type("application/json");
-
         var user = new Gson().fromJson(request.body(), RegistrationRequest.class);
 
         if (user.username() == null || user.username().isBlank() ||
                 user.password() == null || user.password().isBlank() ||
-                user.email() == null || user.email().isBlank()) {
+                user.email()    == null || user.email().isBlank()) {
             throw new ResponseException(400, "Missing required fields");
         }
 
@@ -110,7 +109,7 @@ public class Server {
         return new Gson().toJson(authData);
     }
 
-    private Object loginUser(Request request, Response response)
+    private Object loginUser(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         response.type("application/json");
         var user = new Gson().fromJson(request.body(), LoginRequest.class);
@@ -119,7 +118,7 @@ public class Server {
         return new Gson().toJson(authData);
     }
 
-    private Object logoutUser(Request request, Response response)
+    private Object logoutUser(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         response.type("application/json");
         var authToken = new LogoutRequest(request.headers("authorization"));
@@ -129,7 +128,7 @@ public class Server {
         return "{}";
     }
 
-    private Object getGames(Request request, Response response)
+    private Object getGames(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         var authToken = request.headers("authorization");
         authService.authenticate(authToken);
@@ -138,7 +137,7 @@ public class Server {
         return new Gson().toJson(new ListGamesResponse(allGames));
     }
 
-    private Object joinGame(Request request, Response response)
+    private Object joinGame(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         var authToken = request.headers("authorization");
         authService.authenticate(authToken);
@@ -149,7 +148,7 @@ public class Server {
         return "{}";
     }
 
-    private Object createGame(Request request, Response response)
+    private Object createGame(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         var authToken = request.headers("authorization");
         authService.authenticate(authToken);
@@ -159,14 +158,14 @@ public class Server {
         return new Gson().toJson(gameID);
     }
 
-    private Object clearApp(Request request, Response response)
+    private Object clearApp(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         clearService.clearDatabase();
         response.status(200);
         return "{}";
     }
 
-    private Object observeGame(Request request, Response response)
+    private Object observeGame(spark.Request request, spark.Response response)
             throws ResponseException, DataAccessException {
         var authToken = request.headers("authorization");
         authService.authenticate(authToken);

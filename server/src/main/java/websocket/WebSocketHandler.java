@@ -3,19 +3,33 @@ package websocket;
 import chess.ChessGame;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import dataaccess.DataAccessException;
+import exception.ResponseException;
 import model.AuthData;
+import model.JoinGameRequest;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import service.AuthenticationService;
 import service.GameService;
 import service.JoinService;
 import websocket.commands.UserGameCommand;
+import websocket.commands.UserGameCommand.CommandType;
 import websocket.messages.*;
-import model.JoinGameRequest;
+
 import java.io.IOException;
 
 @WebSocket
 public class WebSocketHandler {
+
+    private static GameService gameService;
+    private static AuthenticationService authService;
+    private static JoinService joinService;
+
+    public static void configure(GameService gs, AuthenticationService as, JoinService js) {
+        gameService = gs;
+        authService = as;
+        joinService = js;
+    }
 
     private final ConnectionManager connectionManager = new ConnectionManager();
 
@@ -23,15 +37,7 @@ public class WebSocketHandler {
             .registerTypeAdapter(ServerMessage.class, new ServerMessageDeserializer())
             .create();
 
-    private final GameService gameService;
-    private final AuthenticationService authService;
-    private final JoinService joinService;
-
-    public WebSocketHandler(GameService gameService, AuthenticationService authService, JoinService joinService) {
-        this.gameService = gameService;
-        this.authService = authService;
-        this.joinService = joinService;
-    }
+    public WebSocketHandler() { }
 
     @OnWebSocketConnect
     public void onConnect(Session session) {
@@ -40,224 +46,198 @@ public class WebSocketHandler {
 
     @OnWebSocketMessage
     public void onMessage(Session session, String json) {
-        System.out.println("Received message: " + json);
+        System.out.println("Received: " + json);
 
         try {
-            UserGameCommand command = gson.fromJson(json, UserGameCommand.class);
+            UserGameCommand cmd = gson.fromJson(json, UserGameCommand.class);
 
-            switch (command.getCommandType()) {
-                case CONNECT -> handleConnect(session, command);
-
+            switch (cmd.getCommandType()) {
+                case CONNECT -> handleConnect(session, cmd);
                 case MAKE_MOVE, RESIGN -> {
-                    ClientConnection connection = connectionManager.getConnection(session);
-                    if (connection == null) {
-                        System.err.println("⚠️ No connection found for session: " + session.getRemoteAddress());
+                    ClientConnection conn = connectionManager.getConnection(session);
+                    if (conn == null) {
                         sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
                         return;
                     }
-
-                    switch (command.getCommandType()) {
-                        case MAKE_MOVE -> handleMove(connection, command);
-                        case RESIGN -> handleResign(connection);
-                    }
+                    if (cmd.getCommandType() == CommandType.MAKE_MOVE) handleMove(conn, cmd);
+                    else handleResign(conn);
                 }
-
                 case LEAVE -> {
-                    ClientConnection connection = connectionManager.getConnection(command.getAuthToken());
-                    if (connection == null) {
-                        System.err.println("⚠️ No connection found for token: " + command.getAuthToken());
+                    ClientConnection conn = connectionManager.getConnection(cmd.getAuthToken());
+                    if (conn == null) {
                         sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
                         return;
                     }
-                    handleLeave(connection);
+                    handleLeave(conn);
                 }
+                default -> sendRaw(session, gson.toJson(new ErrorMessage("Unknown command")));
             }
 
         } catch (Exception e) {
-            System.err.println("Failed to parse command: " + e.getMessage());
             sendRaw(session, gson.toJson(new ErrorMessage("Invalid command format")));
         }
     }
 
     @OnWebSocketClose
-    public void onClose(Session session, int statusCode, String reason) {
-        System.out.println("Client disconnected: " + (reason != null ? reason : "No reason provided"));
-        ClientConnection connection = connectionManager.getConnection(session);
-        handleLeave(connection);
+    public void onClose(Session session, int status, String reason) {
+        ClientConnection conn = connectionManager.getConnection(session);
+        handleLeave(conn);
     }
 
     @OnWebSocketError
     public void onError(Session session, Throwable error) {
-        System.err.println("WebSocket error: " + error.getMessage());
-        ClientConnection connection = connectionManager.getConnection(session);
-        handleLeave(connection);
+        ClientConnection conn = connectionManager.getConnection(session);
+        handleLeave(conn);
     }
 
-    private void handleConnect(Session session, UserGameCommand command) {
+    private void handleConnect(Session session, UserGameCommand cmd) {
         try {
-            AuthData authData = authService.getAuthData(command.getAuthToken());
-            if (authData == null) {
+            AuthData auth = authService.getAuthData(cmd.getAuthToken());
+            if (auth == null) {
                 sendRaw(session, gson.toJson(new ErrorMessage("Invalid auth token")));
                 return;
             }
 
-            String username = authData.username();
-            var gameData = gameService.getGameData(command.getGameID());
+            String user = auth.username();
+            int gameID = cmd.getGameID();
+            var data = gameService.getGameData(gameID);
 
-            boolean isAlreadyWhite = username.equals(gameData.whiteUsername());
-            boolean isAlreadyBlack = username.equals(gameData.blackUsername());
+            boolean isWhite = user.equals(data.whiteUsername());
+            boolean isBlack = user.equals(data.blackUsername());
+            boolean joinNew = false;
+            String color;
 
-            String playerColor;
-            boolean shouldJoin = false;
+            if (isWhite) color = "WHITE";
+            else if (isBlack) color = "BLACK";
+            else if (data.whiteUsername() == null) {
+                color = "WHITE"; joinNew = true;
+            } else if (data.blackUsername() == null) {
+                color = "BLACK"; joinNew = true;
+            } else color = "OBSERVER";
 
-            if (isAlreadyWhite) {
-                playerColor = "WHITE";
-            } else if (isAlreadyBlack) {
-                playerColor = "BLACK";
-            } else if (gameData.whiteUsername() == null) {
-                playerColor = "WHITE";
-                shouldJoin = true;
-            } else if (gameData.blackUsername() == null) {
-                playerColor = "BLACK";
-                shouldJoin = true;
-            } else {
-                playerColor = "OBSERVER";
+            if (joinNew) {
+                try {
+                    joinService.joinGame(new JoinGameRequest(color, gameID), auth);
+                } catch (ResponseException | DataAccessException e) {
+                    sendRaw(session, gson.toJson(new ErrorMessage("Join failed: " + e.getMessage())));
+                    return;
+                }
             }
 
-            System.out.println("🔍 Determined playerColor: " + playerColor);
-            System.out.println("🔍 ShouldJoin: " + shouldJoin);
-
-            if (shouldJoin) {
-                JoinGameRequest joinRequest = new JoinGameRequest(playerColor, command.getGameID());
-                joinService.joinGame(joinRequest, authData);
-                System.out.println("✅ Joined game as " + playerColor);
-            }
-
-            ClientConnection connection = new ClientConnection(username, session, command.getAuthToken());
-            connectionManager.addConnection(command.getGameID(), connection);
-            System.out.println("📌 Added connection for " + username + " to game " + command.getGameID());
-
-            ChessGame game = gameService.getGameData(command.getGameID()).game();
-            LoadGameMessage loadGame = new LoadGameMessage(game, playerColor);
-            System.out.println("📤 Serialized LOAD_GAME: " + gson.toJson(loadGame));
-            connection.send(loadGame);
-
-            NotificationMessage joinMsg = new NotificationMessage(username + " joined game " + command.getGameID());
-            connectionManager.broadcastToOthers(command.getGameID(), connection, joinMsg);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
-        }
-    }
-
-    private void handleMove(ClientConnection connection, UserGameCommand command) {
-        if (connection == null) return;
-
-        int gameID = connectionManager.getGameID(connection);
-        String username = connection.getUserName();
-
-        try {
-            AuthData authData = authService.getAuthData(command.getAuthToken());
-            if (authData == null || !authData.username().equals(username)) {
-                connection.send(new ErrorMessage("Invalid auth token"));
-                return;
-            }
+            ClientConnection conn = new ClientConnection(user, session, cmd.getAuthToken());
+            connectionManager.addConnection(gameID, conn);
 
             ChessGame game = gameService.getGameData(gameID).game();
-            var currentTurn = game.getTeamTurn();
-            var whitePlayer = gameService.getGameData(gameID).whiteUsername();
-            var blackPlayer = gameService.getGameData(gameID).blackUsername();
+            conn.send(new LoadGameMessage(game, color));
 
-            boolean isTurnValid = (currentTurn == ChessGame.TeamColor.WHITE && username.equals(whitePlayer)) ||
-                    (currentTurn == ChessGame.TeamColor.BLACK && username.equals(blackPlayer));
+            var note = new NotificationMessage(user + " joined game " + gameID);
+            connectionManager.broadcastToOthers(gameID, conn, note);
 
-            if (!isTurnValid) {
-                connection.send(new ErrorMessage("Invalid move: not your turn"));
-                return;
-            }
-
-            gameService.makeMove(gameID, username, command.getMove());
-
-            ChessGame updatedGame = gameService.getGameData(gameID).game();
-            var start = command.getMove().getStartPosition();
-            var end = command.getMove().getEndPosition();
-            var movedPiece = updatedGame.getBoard().getPiece(end);
-
-            LoadGameMessage update = new LoadGameMessage(updatedGame, username);
-            connectionManager.broadcastToGame(gameID, update);
-
-            String moveText = String.format("%s moved %s from %s to %s",
-                    username,
-                    movedPiece != null ? movedPiece.getPieceType() : "a piece",
-                    start.toString(),
-                    end.toString());
-
-            NotificationMessage notify = new NotificationMessage(moveText);
-            connectionManager.broadcastToOthers(gameID, connection, notify);
-
+        } catch (ResponseException | DataAccessException e) {
+            sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
         } catch (Exception e) {
-            connection.send(new ErrorMessage("Invalid move: " + e.getMessage()));
+            sendRaw(session, gson.toJson(new ErrorMessage("Unexpected error: " + e.getMessage())));
         }
     }
 
-    private void handleResign(ClientConnection connection) {
-        if (connection == null) return;
+    private void handleMove(ClientConnection conn, UserGameCommand cmd) {
+        int gameID = connectionManager.getGameID(conn);
+        String user = conn.getUserName();
 
-        int gameID = connectionManager.getGameID(connection);
-        String username = connection.getUserName();
-
+        AuthData auth;
         try {
-            var gameData = gameService.getGameData(gameID);
-            var whitePlayer = gameData.whiteUsername();
-            var blackPlayer = gameData.blackUsername();
-            var game = gameData.game();
-
-            if (!username.equals(whitePlayer) && !username.equals(blackPlayer)) {
-                connection.send(new ErrorMessage("Only players can resign"));
+            auth = authService.getAuthData(cmd.getAuthToken());
+            if (auth == null || !auth.username().equals(user)) {
+                conn.send(new ErrorMessage("Invalid auth token"));
                 return;
             }
-
-            if (game.isGameOver()) {
-                connection.send(new ErrorMessage("Game is already over"));
-                return;
-            }
-
-            gameService.resignPlayer(gameID, username);
-            NotificationMessage notify = new NotificationMessage(username + " resigned");
-            connectionManager.broadcastToGame(gameID, notify);
-
-        } catch (Exception e) {
-            connection.send(new ErrorMessage("Resign failed: " + e.getMessage()));
-        }
-    }
-
-    private void handleLeave(ClientConnection connection) {
-        if (connection == null) {
-            System.err.println("⚠️ No connection found");
+        } catch (ResponseException | DataAccessException e) {
+            conn.send(new ErrorMessage("Auth failed: " + e.getMessage()));
             return;
         }
 
-        int gameID = connectionManager.getGameID(connection);
-        connectionManager.removeConnection(connection.getSession());
+        try {
+            var data = gameService.getGameData(gameID);
+            ChessGame game = data.game();
+
+            boolean valid = (game.getTeamTurn() == ChessGame.TeamColor.WHITE && user.equals(data.whiteUsername()))
+                    || (game.getTeamTurn() == ChessGame.TeamColor.BLACK && user.equals(data.blackUsername()));
+
+            if (!valid) {
+                conn.send(new ErrorMessage("Invalid move: not your turn"));
+                return;
+            }
+
+            gameService.makeMove(gameID, user, cmd.getMove());
+            ChessGame updated = gameService.getGameData(gameID).game();
+            connectionManager.broadcastToGame(gameID, new LoadGameMessage(updated, user));
+
+            var mv = cmd.getMove();
+            var piece = updated.getBoard().getPiece(mv.getEndPosition());
+            String text = String.format("%s moved %s from %s to %s",
+                    user,
+                    piece != null ? piece.getPieceType() : "a piece",
+                    mv.getStartPosition(), mv.getEndPosition());
+            connectionManager.broadcastToOthers(gameID, conn, new NotificationMessage(text));
+
+        } catch (ResponseException | DataAccessException e) {
+            conn.send(new ErrorMessage("Move failed: " + e.getMessage()));
+        } catch (Exception e) {
+            conn.send(new ErrorMessage("Unexpected error: " + e.getMessage()));
+        }
+    }
+
+    private void handleResign(ClientConnection conn) {
+        int gameID = connectionManager.getGameID(conn);
+        String user = conn.getUserName();
 
         try {
-            var gameData = gameService.getGameData(gameID);
-            var whitePlayer = gameData.whiteUsername();
-            var blackPlayer = gameData.blackUsername();
-            String username = connection.getUserName();
+            var data = gameService.getGameData(gameID);
 
-            if (username.equals(whitePlayer)) {
+            if (!user.equals(data.whiteUsername()) && !user.equals(data.blackUsername())) {
+                conn.send(new ErrorMessage("Only players can resign"));
+                return;
+            }
+
+            if (data.game().isGameOver()) {
+                conn.send(new ErrorMessage("Game already over"));
+                return;
+            }
+
+            gameService.resignPlayer(gameID, user);
+            connectionManager.broadcastToGame(gameID,
+                    new NotificationMessage(user + " resigned"));
+
+        } catch (ResponseException | DataAccessException e) {
+            conn.send(new ErrorMessage("Resign failed: " + e.getMessage()));
+        } catch (Exception e) {
+            conn.send(new ErrorMessage("Unexpected error: " + e.getMessage()));
+        }
+    }
+
+    private void handleLeave(ClientConnection conn) {
+        if (conn == null) return;
+
+        int gameID = connectionManager.getGameID(conn);
+        connectionManager.removeConnection(conn.getSession());
+
+        try {
+            var data = gameService.getGameData(gameID);
+            String user = conn.getUserName();
+
+            if (user.equals(data.whiteUsername())) {
                 gameService.clearPlayerColor(gameID, ChessGame.TeamColor.WHITE);
-            } else if (username.equals(blackPlayer)) {
+            } else if (user.equals(data.blackUsername())) {
                 gameService.clearPlayerColor(gameID, ChessGame.TeamColor.BLACK);
             }
 
-            NotificationMessage leaveMsg = new NotificationMessage(username + " left game " + gameID);
-            connectionManager.broadcastToGame(gameID, leaveMsg);
+            connectionManager.broadcastToGame(gameID,
+                    new NotificationMessage(user + " left game " + gameID));
 
+        } catch (ResponseException | DataAccessException e) {
+            System.err.println("Leave cleanup failed: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("⚠️ Skipping leave logic — game not found for ID " + gameID);
+            System.err.println("Unexpected error during leave: " + e.getMessage());
         }
     }
 
@@ -265,7 +245,7 @@ public class WebSocketHandler {
         try {
             session.getRemote().sendString(json);
         } catch (IOException e) {
-            System.err.println("Failed to send raw message: " + e.getMessage());
+            System.err.println("Failed to send message: " + e.getMessage());
         }
     }
 }
