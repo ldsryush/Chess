@@ -1,7 +1,7 @@
 package websocket;
 
-import org.eclipse.jetty.websocket.api.Session;
 import websocket.messages.ServerMessage;
+import org.eclipse.jetty.websocket.api.Session;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,16 +11,18 @@ public class ConnectionManager {
     private final Map<Session, ClientConnection> sessionToConnection = new ConcurrentHashMap<>();
     private final Map<String, ClientConnection> tokenToConnection = new ConcurrentHashMap<>();
     private final Map<Integer, List<ClientConnection>> gameToConnections = new ConcurrentHashMap<>();
-    private final Set<Session> removedSessions = ConcurrentHashMap.newKeySet(); // ✅ Prevent double cleanup
+    private final Set<Session> removedSessions = ConcurrentHashMap.newKeySet(); // Prevent double cleanup
 
     public void addConnection(int gameID, ClientConnection connection) {
-        sessionToConnection.put(connection.getSession(), connection);
+        Session session = connection.getSession();
+        sessionToConnection.put(session, connection);
         tokenToConnection.put(connection.getAuthToken(), connection);
         gameToConnections.computeIfAbsent(gameID, k -> new ArrayList<>()).add(connection);
         System.out.println("📌 Added connection for " + connection.getUserName() + " to game " + gameID);
     }
 
     public ClientConnection getConnection(Session session) {
+        System.out.println("🔍 Looking up session: " + session);
         return sessionToConnection.get(session);
     }
 
