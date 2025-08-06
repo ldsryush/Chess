@@ -1,5 +1,6 @@
 package websocket;
 
+import org.eclipse.jetty.websocket.api.Session;
 import websocket.messages.ServerMessage;
 
 import java.util.*;
@@ -8,18 +9,25 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConnectionManager {
 
     private final Map<Integer, List<ClientConnection>> gameConnections = new ConcurrentHashMap<>();
-    private final Map<ClientConnection, Integer> connectionToGame = new ConcurrentHashMap<>();
+    private final Map<Session, Integer> sessionToGame = new ConcurrentHashMap<>();
+    private final Map<Session, ClientConnection> sessionToConnection = new ConcurrentHashMap<>();
 
     public void addConnection(int gameID, ClientConnection connection) {
+        Session session = connection.getSession();
+
         gameConnections
                 .computeIfAbsent(gameID, id -> Collections.synchronizedList(new ArrayList<>()))
                 .add(connection);
-        connectionToGame.put(connection, gameID);
+
+        sessionToGame.put(session, gameID);
+        sessionToConnection.put(session, connection);
     }
 
-    public void removeConnection(ClientConnection connection) {
-        Integer gameID = connectionToGame.remove(connection);
-        if (gameID != null) {
+    public void removeConnection(Session session) {
+        ClientConnection connection = sessionToConnection.remove(session);
+        Integer gameID = sessionToGame.remove(session);
+
+        if (connection != null && gameID != null) {
             List<ClientConnection> connections = gameConnections.get(gameID);
             if (connections != null) {
                 connections.remove(connection);
@@ -59,7 +67,11 @@ public class ConnectionManager {
     }
 
     public Integer getGameID(ClientConnection connection) {
-        return connectionToGame.get(connection);
+        return sessionToGame.get(connection.getSession());
+    }
+
+    public ClientConnection getConnection(Session session) {
+        return sessionToConnection.get(session);
     }
 
     public Set<Integer> getActiveGameIDs() {

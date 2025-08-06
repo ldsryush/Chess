@@ -1,5 +1,5 @@
 package websocket;
-//update
+
 import com.google.gson.Gson;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
@@ -13,14 +13,11 @@ import service.GameService;
 import service.JoinService;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @WebSocket
 public class WebSocketHandler {
 
     private final ConnectionManager connectionManager = new ConnectionManager();
-    private final Map<Session, ClientConnection> sessionMap = new ConcurrentHashMap<>();
     private final Gson gson = new Gson();
 
     private final GameService gameService;
@@ -44,14 +41,26 @@ public class WebSocketHandler {
 
         try {
             UserGameCommand command = gson.fromJson(json, UserGameCommand.class);
-            ClientConnection connection = sessionMap.get(session);
 
             switch (command.getCommandType()) {
                 case CONNECT -> handleConnect(session, command);
-                case MAKE_MOVE -> handleMove(connection, command);
-                case RESIGN -> handleResign(connection);
-                case LEAVE -> handleLeave(connection);
+
+                case MAKE_MOVE, RESIGN, LEAVE -> {
+                    ClientConnection connection = connectionManager.getConnection(session);
+                    if (connection == null) {
+                        System.err.println("⚠️ No connection found for session: " + session.getRemoteAddress());
+                        sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
+                        return;
+                    }
+
+                    switch (command.getCommandType()) {
+                        case MAKE_MOVE -> handleMove(connection, command);
+                        case RESIGN -> handleResign(connection);
+                        case LEAVE -> handleLeave(connection);
+                    }
+                }
             }
+
         } catch (Exception e) {
             System.err.println("Failed to parse command: " + e.getMessage());
             sendRaw(session, gson.toJson(new ErrorMessage("Invalid command format")));
@@ -60,16 +69,16 @@ public class WebSocketHandler {
 
     @OnWebSocketClose
     public void onClose(Session session, int statusCode, String reason) {
-        System.out.println("Client disconnected: " + reason);
-        handleLeave(sessionMap.get(session));
-        sessionMap.remove(session);
+        System.out.println("Client disconnected: " + (reason != null ? reason : "No reason provided"));
+        ClientConnection connection = connectionManager.getConnection(session);
+        handleLeave(connection);
     }
 
     @OnWebSocketError
     public void onError(Session session, Throwable error) {
         System.err.println("WebSocket error: " + error.getMessage());
-        handleLeave(sessionMap.get(session));
-        sessionMap.remove(session);
+        ClientConnection connection = connectionManager.getConnection(session);
+        handleLeave(connection);
     }
 
     private void handleConnect(Session session, UserGameCommand command) {
@@ -82,8 +91,9 @@ public class WebSocketHandler {
 
             String username = authData.username();
             ClientConnection connection = new ClientConnection(username, session);
-            sessionMap.put(session, connection);
+
             connectionManager.addConnection(command.getGameID(), connection);
+            System.out.println("✅ Registered connection for " + username + " in game " + command.getGameID());
 
             var gameData = gameService.getGameData(command.getGameID());
             ChessGame game = gameData.game();
@@ -190,17 +200,19 @@ public class WebSocketHandler {
     }
 
     private void handleLeave(ClientConnection connection) {
-        if (connection == null) return;
+        if (connection == null) {
+            System.err.println("⚠️ No connection found");
+            return;
+        }
 
         int gameID = connectionManager.getGameID(connection);
-        String username = connection.getUserName();
-
-        connectionManager.removeConnection(connection);
+        connectionManager.removeConnection(connection.getSession());
 
         try {
             var gameData = gameService.getGameData(gameID);
             var whitePlayer = gameData.whiteUsername();
             var blackPlayer = gameData.blackUsername();
+            String username = connection.getUserName();
 
             if (username.equals(whitePlayer)) {
                 gameService.clearPlayerColor(gameID, ChessGame.TeamColor.WHITE);
@@ -208,14 +220,13 @@ public class WebSocketHandler {
                 gameService.clearPlayerColor(gameID, ChessGame.TeamColor.BLACK);
             }
 
+            NotificationMessage leaveMsg = new NotificationMessage(username + " left game " + gameID);
+            connectionManager.broadcastToGame(gameID, leaveMsg);
+
         } catch (Exception e) {
-            System.err.println("Failed to clear player color: " + e.getMessage());
+            System.err.println("⚠️ Skipping leave logic — game not found for ID " + gameID);
         }
-
-        NotificationMessage leaveMsg = new NotificationMessage(username + " left game " + gameID);
-        connectionManager.broadcastToGame(gameID, leaveMsg);
     }
-
 
     private void sendRaw(Session session, String json) {
         try {

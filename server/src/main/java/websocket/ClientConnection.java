@@ -17,6 +17,10 @@ public class ClientConnection {
         this.session = session;
     }
 
+    public Session getSession() {
+        return session;
+    }
+
     public String getUserName() {
         return userName;
     }
@@ -25,9 +29,6 @@ public class ClientConnection {
         return session != null && session.isOpen();
     }
 
-    /**
-     * Sends a raw JSON string to the client.
-     */
     public void send(String message) {
         if (isOpen()) {
             try {
@@ -40,9 +41,6 @@ public class ClientConnection {
         }
     }
 
-    /**
-     * Sends a structured ServerMessage to the client.
-     */
     public void send(ServerMessage message) {
         String json = gson.toJson(message);
         send(json);
@@ -53,11 +51,12 @@ public class ClientConnection {
         if (this == obj) return true;
         if (!(obj instanceof ClientConnection)) return false;
         ClientConnection other = (ClientConnection) obj;
-        return Objects.equals(session, other.session);
+        return Objects.equals(userName, other.userName) &&
+                Objects.equals(session, other.session);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(session);
+        return Objects.hash(userName, session);
     }
 }
