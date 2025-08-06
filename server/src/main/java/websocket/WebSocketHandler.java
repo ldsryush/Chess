@@ -86,9 +86,18 @@ public class WebSocketHandler {
             connectionManager.addConnection(command.getGameID(), connection);
 
             var gameData = gameService.getGameData(command.getGameID());
-            String playerColor = username.equals(gameData.whiteUsername()) ? "WHITE" : "BLACK";
+            ChessGame game = gameData.game();
 
-            LoadGameMessage loadGame = new LoadGameMessage(gameData.game(), playerColor);
+            String playerColor;
+            if (username.equals(gameData.whiteUsername())) {
+                playerColor = "WHITE";
+            } else if (username.equals(gameData.blackUsername())) {
+                playerColor = "BLACK";
+            } else {
+                playerColor = "OBSERVER";
+            }
+
+            LoadGameMessage loadGame = new LoadGameMessage(game, playerColor);
             connection.send(loadGame);
 
             NotificationMessage joinMsg = new NotificationMessage(username + " joined game " + command.getGameID());
