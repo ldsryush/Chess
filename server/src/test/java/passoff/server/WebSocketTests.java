@@ -150,6 +150,7 @@ public class WebSocketTests {
     public void invalidMoveObserver() {
         setupNormalGame();
 
+        //have observer attempt to make an otherwise valid move
         ChessMove move = new ChessMove(new ChessPosition(2, 5), new ChessPosition(4, 5), null);
         makeMove(observer, gameID, move, false, false, Set.of(white, black), Set.of(), "observer attempts move");
     }

@@ -11,7 +11,7 @@ import service.GameService;
 import service.JoinService;
 import websocket.commands.UserGameCommand;
 import websocket.messages.*;
-
+import model.JoinGameRequest;
 import java.io.IOException;
 
 @WebSocket
@@ -102,29 +102,47 @@ public class WebSocketHandler {
             }
 
             String username = authData.username();
+            var gameData = gameService.getGameData(command.getGameID());
+
+            String playerColor;
+            boolean shouldJoin = false;
+
+            if (username.equals(gameData.whiteUsername())) {
+                playerColor = "WHITE";
+            } else if (username.equals(gameData.blackUsername())) {
+                playerColor = "BLACK";
+            } else {
+                if (gameData.whiteUsername() == null) {
+                    playerColor = "WHITE";
+                    shouldJoin = true;
+                } else if (gameData.blackUsername() == null) {
+                    playerColor = "BLACK";
+                    shouldJoin = true;
+                } else {
+                    playerColor = "OBSERVER";
+                }
+            }
+
+            if (shouldJoin) {
+                JoinGameRequest joinRequest = new JoinGameRequest(playerColor, command.getGameID());
+                joinService.joinGame(joinRequest, authData);
+            }
+
             ClientConnection connection = new ClientConnection(username, session, command.getAuthToken());
             connectionManager.addConnection(command.getGameID(), connection);
-            System.out.println("✅ Registered connection for " + username + " in game " + command.getGameID());
 
-            var gameData = gameService.getGameData(command.getGameID());
-            ChessGame game = gameData.game();
-
-            String playerColor = username.equals(gameData.whiteUsername()) ? "WHITE"
-                    : username.equals(gameData.blackUsername()) ? "BLACK"
-                    : "OBSERVER";
-
+            ChessGame game = gameService.getGameData(command.getGameID()).game();
             LoadGameMessage loadGame = new LoadGameMessage(game, playerColor);
-            System.out.println("📤 Serialized LOAD_GAME: " + gson.toJson(loadGame));
             connection.send(loadGame);
 
             NotificationMessage joinMsg = new NotificationMessage(username + " joined game " + command.getGameID());
-            System.out.println("🔔 Notifying others that " + username + " joined game " + command.getGameID());
             connectionManager.broadcastToOthers(command.getGameID(), connection, joinMsg);
 
         } catch (Exception e) {
             sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
         }
     }
+
 
     private void handleMove(ClientConnection connection, UserGameCommand command) {
         if (connection == null) return;
