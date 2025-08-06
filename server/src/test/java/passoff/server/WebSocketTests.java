@@ -7,7 +7,6 @@ import passoff.websocket.*;
 import server.Server;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
-
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -309,7 +308,7 @@ public class WebSocketTests {
         Map<String, Integer> numExpectedMessages = expectedMessages(sender, 1, inGame, (expectSuccess ? 1 : 0), otherClients);
         Map<String, List<TestMessage>> actualMessages = environment.exchange(sender.username(), connectCommand, numExpectedMessages, waitTime);
 
-        assertCommandMessages(actualMessages, expectSuccess, sender, types(LOAD_GAME), inGame, types(NOTIFICATION), otherClients, description);
+        assertCommandMessages(actualMessages, expectSuccess, sender, types(ServerMessage.ServerMessageType.LOAD_GAME), inGame, types(ServerMessage.ServerMessageType.NOTIFICATION), otherClients, description);
     }
 
     private void makeMove(WebsocketUser sender, int gameID, ChessMove move, boolean expectSuccess, boolean extraNotification,
@@ -319,12 +318,12 @@ public class WebSocketTests {
         Map<String, List<TestMessage>> actualMessages = environment.exchange(sender.username(), moveCommand, numExpectedMessages, waitTime);
 
         if(extraNotification && actualMessages.get(sender.username()).size() > 1) {
-            assertCommandMessages(actualMessages, expectSuccess, sender, types(LOAD_GAME, NOTIFICATION),
-                    inGame, types(LOAD_GAME, NOTIFICATION, NOTIFICATION), otherClients, description);
+            assertCommandMessages(actualMessages, expectSuccess, sender, types(ServerMessage.ServerMessageType.LOAD_GAME, ServerMessage.ServerMessageType.NOTIFICATION),
+                    inGame, types(ServerMessage.ServerMessageType.LOAD_GAME, ServerMessage.ServerMessageType.NOTIFICATION, ServerMessage.ServerMessageType.NOTIFICATION), otherClients, description);
         }
         else {
-            assertCommandMessages(actualMessages, expectSuccess, sender, types(LOAD_GAME),
-                    inGame, types(LOAD_GAME, NOTIFICATION), otherClients, description);
+            assertCommandMessages(actualMessages, expectSuccess, sender, types(ServerMessage.ServerMessageType.LOAD_GAME),
+                    inGame, types(ServerMessage.ServerMessageType.LOAD_GAME, ServerMessage.ServerMessageType.NOTIFICATION), otherClients, description);
         }
     }
 
@@ -334,8 +333,8 @@ public class WebSocketTests {
         Map<String, Integer> numExpectedMessages = expectedMessages(sender, 1, inGame, (expectSuccess ? 1 : 0), otherClients);
         Map<String, List<TestMessage>> actualMessages = environment.exchange(sender.username(), resignCommand, numExpectedMessages, waitTime);
 
-        assertCommandMessages(actualMessages, expectSuccess, sender, types(NOTIFICATION),
-                inGame, types(NOTIFICATION), otherClients, description);
+        assertCommandMessages(actualMessages, expectSuccess, sender, types(ServerMessage.ServerMessageType.NOTIFICATION),
+                inGame, types(ServerMessage.ServerMessageType.NOTIFICATION), otherClients, description);
     }
 
     private void leave(WebsocketUser sender, int gameID, Set<WebsocketUser> inGame, Set<WebsocketUser> otherClients, String description) {
@@ -343,7 +342,7 @@ public class WebSocketTests {
         Map<String, Integer> numExpectedMessages = expectedMessages(sender, 0, inGame, 1, otherClients);
         Map<String, List<TestMessage>> actualMessages = environment.exchange(sender.username(), leaveCommand, numExpectedMessages, waitTime);
 
-        assertCommandMessages(actualMessages, true, sender, types(), inGame, types(NOTIFICATION), otherClients, description);
+        assertCommandMessages(actualMessages, true, sender, types(), inGame, types(ServerMessage.ServerMessageType.NOTIFICATION), otherClients, description);
     }
 
     private Map<String, Integer> expectedMessages(WebsocketUser sender, int senderExpected,
@@ -360,7 +359,7 @@ public class WebSocketTests {
                                        Set<WebsocketUser> inGame, ServerMessage.ServerMessageType[] inGameExpectedTypes,
                                        Set<WebsocketUser> otherClients, String description) {
         if(!expectSuccess) {
-            userExpectedTypes = new ServerMessage.ServerMessageType[]{ERROR};
+            userExpectedTypes = new ServerMessage.ServerMessageType[]{ServerMessage.ServerMessageType.ERROR};
             inGameExpectedTypes = new ServerMessage.ServerMessageType[0];
         }
         assertMessages(user.username(), userExpectedTypes, messages.get(user.username()), description);
