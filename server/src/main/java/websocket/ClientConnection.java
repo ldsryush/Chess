@@ -10,11 +10,13 @@ import java.util.Objects;
 public class ClientConnection {
     private final String userName;
     private final Session session;
+    private final String authToken;
     private static final Gson gson = new Gson();
 
-    public ClientConnection(String userName, Session session) {
+    public ClientConnection(String userName, Session session, String authToken) {
         this.userName = userName;
         this.session = session;
+        this.authToken = authToken;
     }
 
     public Session getSession() {
@@ -23,6 +25,10 @@ public class ClientConnection {
 
     public String getUserName() {
         return userName;
+    }
+
+    public String getAuthToken() {
+        return authToken;
     }
 
     public boolean isOpen() {
@@ -34,15 +40,20 @@ public class ClientConnection {
             try {
                 session.getRemote().sendString(message);
             } catch (IOException e) {
-                System.err.println("Failed to send message to " + userName + ": " + e.getMessage());
+                System.err.println("❌ Failed to send message to " + userName + ": " + e.getMessage());
             }
         } else {
-            System.err.println("Session closed for " + userName + ", message not sent.");
+            System.out.println("ℹ️ Skipping send — session closed for " + userName);
         }
     }
 
     public void send(ServerMessage message) {
+        if (!isOpen()) {
+            System.out.println("ℹ️ Skipping send — session closed for " + userName);
+            return;
+        }
         String json = gson.toJson(message);
+        System.out.println("📨 Sent to " + userName + ": " + json);
         send(json);
     }
 
@@ -51,12 +62,11 @@ public class ClientConnection {
         if (this == obj) return true;
         if (!(obj instanceof ClientConnection)) return false;
         ClientConnection other = (ClientConnection) obj;
-        return Objects.equals(userName, other.userName) &&
-                Objects.equals(session, other.session);
+        return Objects.equals(userName, other.userName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(userName, session);
+        return Objects.hash(userName);
     }
 }

@@ -8,77 +8,82 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ConnectionManager {
 
-    private final Map<Integer, List<ClientConnection>> gameConnections = new ConcurrentHashMap<>();
-    private final Map<Session, Integer> sessionToGame = new ConcurrentHashMap<>();
     private final Map<Session, ClientConnection> sessionToConnection = new ConcurrentHashMap<>();
+    private final Map<String, ClientConnection> tokenToConnection = new ConcurrentHashMap<>();
+    private final Map<Integer, List<ClientConnection>> gameToConnections = new ConcurrentHashMap<>();
+    private final Set<Session> removedSessions = ConcurrentHashMap.newKeySet(); // ✅ Prevent double cleanup
 
     public void addConnection(int gameID, ClientConnection connection) {
-        Session session = connection.getSession();
-
-        gameConnections
-                .computeIfAbsent(gameID, id -> Collections.synchronizedList(new ArrayList<>()))
-                .add(connection);
-
-        sessionToGame.put(session, gameID);
-        sessionToConnection.put(session, connection);
-    }
-
-    public void removeConnection(Session session) {
-        ClientConnection connection = sessionToConnection.remove(session);
-        Integer gameID = sessionToGame.remove(session);
-
-        if (connection != null && gameID != null) {
-            List<ClientConnection> connections = gameConnections.get(gameID);
-            if (connections != null) {
-                connections.remove(connection);
-                if (connections.isEmpty()) {
-                    gameConnections.remove(gameID);
-                }
-            }
-        }
-    }
-
-    public void broadcastToGame(int gameID, ServerMessage message) {
-        List<ClientConnection> connections = gameConnections.get(gameID);
-        if (connections == null) return;
-
-        synchronized (connections) {
-            for (ClientConnection connection : connections) {
-                if (connection.isOpen()) {
-                    connection.send(message);
-                } else {
-                    System.err.println("Connection closed: unable to send message to " + connection.getUserName());
-                }
-            }
-        }
-    }
-
-    public void broadcastToOthers(int gameID, ClientConnection sender, ServerMessage message) {
-        List<ClientConnection> connections = gameConnections.get(gameID);
-        if (connections == null) return;
-
-        synchronized (connections) {
-            for (ClientConnection connection : connections) {
-                if (!connection.equals(sender) && connection.isOpen()) {
-                    connection.send(message);
-                }
-            }
-        }
-    }
-
-    public Integer getGameID(ClientConnection connection) {
-        return sessionToGame.get(connection.getSession());
+        sessionToConnection.put(connection.getSession(), connection);
+        tokenToConnection.put(connection.getAuthToken(), connection);
+        gameToConnections.computeIfAbsent(gameID, k -> new ArrayList<>()).add(connection);
+        System.out.println("📌 Added connection for " + connection.getUserName() + " to game " + gameID);
     }
 
     public ClientConnection getConnection(Session session) {
         return sessionToConnection.get(session);
     }
 
-    public Set<Integer> getActiveGameIDs() {
-        return gameConnections.keySet();
+    public ClientConnection getConnection(String authToken) {
+        ClientConnection conn = tokenToConnection.get(authToken);
+        System.out.println(conn != null ? "✅ Found connection for token: " + authToken
+                : "⚠️ No connection found for token: " + authToken);
+        return conn;
     }
 
-    public List<ClientConnection> getConnectionsInGame(int gameID) {
-        return gameConnections.getOrDefault(gameID, Collections.emptyList());
+    public int getGameID(ClientConnection connection) {
+        for (var entry : gameToConnections.entrySet()) {
+            if (entry.getValue().contains(connection)) {
+                return entry.getKey();
+            }
+        }
+        return -1;
+    }
+
+    public void removeConnection(Session session) {
+        if (removedSessions.contains(session)) {
+            System.out.println("ℹ️ Skipping removal — session already cleaned up.");
+            return;
+        }
+        removedSessions.add(session);
+
+        ClientConnection connection = sessionToConnection.remove(session);
+        if (connection == null) {
+            System.out.println("ℹ️ Skipping removal — no connection found for session.");
+            return;
+        }
+
+        tokenToConnection.remove(connection.getAuthToken());
+
+        for (var connections : gameToConnections.values()) {
+            connections.remove(connection);
+        }
+    }
+
+    public void broadcastToGame(int gameID, ServerMessage message) {
+        List<ClientConnection> connections = gameToConnections.get(gameID);
+        if (connections != null) {
+            System.out.println("📣 Broadcasting to all in game " + gameID + ": " + message);
+            for (ClientConnection conn : connections) {
+                conn.send(message);
+            }
+        } else {
+            System.out.println("⚠️ No connections found for game " + gameID);
+        }
+    }
+
+    public void broadcastToOthers(int gameID, ClientConnection sender, ServerMessage message) {
+        List<ClientConnection> connections = gameToConnections.get(gameID);
+        if (connections != null) {
+            System.out.println("📣 Broadcasting to others in game " + gameID + ": " + message);
+            for (ClientConnection conn : connections) {
+                if (!conn.equals(sender)) {
+                    System.out.println("➡️ Sending to: " + conn.getUserName());
+                    conn.send(message);
+                }
+            }
+        } else {
+            System.out.println("⚠️ No connections found for game " + gameID);
+        }
     }
 }

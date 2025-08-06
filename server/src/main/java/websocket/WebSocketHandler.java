@@ -1,16 +1,16 @@
 package websocket;
 
+import chess.ChessGame;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import model.AuthData;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
-import websocket.commands.UserGameCommand;
-import websocket.messages.*;
-
-import chess.ChessGame;
-import model.AuthData;
 import service.AuthenticationService;
 import service.GameService;
 import service.JoinService;
+import websocket.commands.UserGameCommand;
+import websocket.messages.*;
 
 import java.io.IOException;
 
@@ -18,7 +18,10 @@ import java.io.IOException;
 public class WebSocketHandler {
 
     private final ConnectionManager connectionManager = new ConnectionManager();
-    private final Gson gson = new Gson();
+
+    private final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(ServerMessage.class, new ServerMessageDeserializer())
+            .create();
 
     private final GameService gameService;
     private final AuthenticationService authService;
@@ -45,7 +48,7 @@ public class WebSocketHandler {
             switch (command.getCommandType()) {
                 case CONNECT -> handleConnect(session, command);
 
-                case MAKE_MOVE, RESIGN, LEAVE -> {
+                case MAKE_MOVE, RESIGN -> {
                     ClientConnection connection = connectionManager.getConnection(session);
                     if (connection == null) {
                         System.err.println("⚠️ No connection found for session: " + session.getRemoteAddress());
@@ -56,8 +59,17 @@ public class WebSocketHandler {
                     switch (command.getCommandType()) {
                         case MAKE_MOVE -> handleMove(connection, command);
                         case RESIGN -> handleResign(connection);
-                        case LEAVE -> handleLeave(connection);
                     }
+                }
+
+                case LEAVE -> {
+                    ClientConnection connection = connectionManager.getConnection(command.getAuthToken());
+                    if (connection == null) {
+                        System.err.println("⚠️ No connection found for token: " + command.getAuthToken());
+                        sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
+                        return;
+                    }
+                    handleLeave(connection);
                 }
             }
 
@@ -90,27 +102,23 @@ public class WebSocketHandler {
             }
 
             String username = authData.username();
-            ClientConnection connection = new ClientConnection(username, session);
-
+            ClientConnection connection = new ClientConnection(username, session, command.getAuthToken());
             connectionManager.addConnection(command.getGameID(), connection);
             System.out.println("✅ Registered connection for " + username + " in game " + command.getGameID());
 
             var gameData = gameService.getGameData(command.getGameID());
             ChessGame game = gameData.game();
 
-            String playerColor;
-            if (username.equals(gameData.whiteUsername())) {
-                playerColor = "WHITE";
-            } else if (username.equals(gameData.blackUsername())) {
-                playerColor = "BLACK";
-            } else {
-                playerColor = "OBSERVER";
-            }
+            String playerColor = username.equals(gameData.whiteUsername()) ? "WHITE"
+                    : username.equals(gameData.blackUsername()) ? "BLACK"
+                    : "OBSERVER";
 
             LoadGameMessage loadGame = new LoadGameMessage(game, playerColor);
+            System.out.println("📤 Serialized LOAD_GAME: " + gson.toJson(loadGame));
             connection.send(loadGame);
 
             NotificationMessage joinMsg = new NotificationMessage(username + " joined game " + command.getGameID());
+            System.out.println("🔔 Notifying others that " + username + " joined game " + command.getGameID());
             connectionManager.broadcastToOthers(command.getGameID(), connection, joinMsg);
 
         } catch (Exception e) {
