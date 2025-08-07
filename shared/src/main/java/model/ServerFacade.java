@@ -18,14 +18,18 @@ public class ServerFacade {
     public AuthData registerUser(UserData userData) throws ResponseException {
         var path = "/user";
         AuthData authData = makeRequest("POST", path, userData, AuthData.class, false);
-        if (authData != null) authToken = authData.authToken();
+        if (authData != null) {
+            authToken = authData.authToken();
+        }
         return authData;
     }
 
     public AuthData loginUser(UserData userData) throws ResponseException {
         var path = "/session";
         AuthData authData = makeRequest("POST", path, userData, AuthData.class, false);
-        if (authData != null) authToken = authData.authToken();
+        if (authData != null) {
+            authToken = authData.authToken();
+        }
         return authData;
     }
 

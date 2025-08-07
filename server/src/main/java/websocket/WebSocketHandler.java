@@ -21,19 +21,14 @@ import java.io.IOException;
 @WebSocket
 public class WebSocketHandler {
 
-    private static final Gson gson = new Gson();
+    private static final Gson GSON = new Gson();
 
-    // Static fields for dependency injection
     private static GameService gameService;
     private static AuthenticationService authService;
     private static JoinService joinService;
     private static NotificationHandler notificationHandler;
     private static ConnectionManager connectionManager;
 
-    /**
-     * Configure the handler with all required dependencies.
-     * This must be called before any WebSocket connections are made.
-     */
     public static void configure(
             GameService gs,
             AuthenticationService as,
@@ -64,14 +59,14 @@ public class WebSocketHandler {
 
         if (gameService == null || authService == null || connectionManager == null) {
             System.err.println("ERROR: WebSocketHandler not properly configured");
-            sendRaw(session, gson.toJson(new ErrorMessage("Server configuration error")));
+            sendRaw(session, GSON.toJson(new ErrorMessage("Server configuration error")));
             return;
         }
 
         try {
-            UserGameCommand cmd = gson.fromJson(message, UserGameCommand.class);
+            UserGameCommand cmd = GSON.fromJson(message, UserGameCommand.class);
             if (cmd == null || cmd.getCommandType() == null) {
-                sendRaw(session, gson.toJson(new ErrorMessage("Invalid command format")));
+                sendRaw(session, GSON.toJson(new ErrorMessage("Invalid command format")));
                 return;
             }
 
@@ -82,7 +77,7 @@ public class WebSocketHandler {
                 case MAKE_MOVE, RESIGN -> {
                     ClientConnection conn = connectionManager.getConnection(session);
                     if (conn == null) {
-                        sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
+                        sendRaw(session, GSON.toJson(new ErrorMessage("No active connection")));
                         return;
                     }
                     if (type == CommandType.MAKE_MOVE) {
@@ -94,18 +89,18 @@ public class WebSocketHandler {
                 case LEAVE -> {
                     ClientConnection conn = connectionManager.getConnection(cmd.getAuthToken());
                     if (conn == null) {
-                        sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
+                        sendRaw(session, GSON.toJson(new ErrorMessage("No active connection")));
                         return;
                     }
                     handleLeave(conn);
                 }
-                default -> sendRaw(session, gson.toJson(new ErrorMessage("Unknown command: " + type)));
+                default -> sendRaw(session, GSON.toJson(new ErrorMessage("Unknown command: " + type)));
             }
 
         } catch (Exception e) {
             System.err.println("Error processing message: " + e.getMessage());
             e.printStackTrace();
-            sendRaw(session, gson.toJson(new ErrorMessage("Invalid command format: " + e.getMessage())));
+            sendRaw(session, GSON.toJson(new ErrorMessage("Invalid command format: " + e.getMessage())));
         }
     }
 
@@ -135,13 +130,13 @@ public class WebSocketHandler {
     private void handleConnect(Session session, UserGameCommand cmd) {
         try {
             if (cmd.getAuthToken() == null || cmd.getGameID() == null) {
-                sendRaw(session, gson.toJson(new ErrorMessage("Missing auth token or game ID")));
+                sendRaw(session, GSON.toJson(new ErrorMessage("Missing auth token or game ID")));
                 return;
             }
 
             AuthData auth = authService.getAuthData(cmd.getAuthToken());
             if (auth == null) {
-                sendRaw(session, gson.toJson(new ErrorMessage("Invalid auth token")));
+                sendRaw(session, GSON.toJson(new ErrorMessage("Invalid auth token")));
                 return;
             }
 
@@ -186,11 +181,11 @@ public class WebSocketHandler {
 
         } catch (ResponseException | DataAccessException e) {
             System.err.println("Connect failed: " + e.getMessage());
-            sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
+            sendRaw(session, GSON.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
         } catch (Exception e) {
             System.err.println("Unexpected connect error: " + e.getMessage());
             e.printStackTrace();
-            sendRaw(session, gson.toJson(new ErrorMessage("Unexpected error: " + e.getMessage())));
+            sendRaw(session, GSON.toJson(new ErrorMessage("Unexpected error: " + e.getMessage())));
         }
     }
 
@@ -259,7 +254,9 @@ public class WebSocketHandler {
     }
 
     private void handleResign(ClientConnection conn) {
-        if (conn == null) return;
+        if (conn == null) {
+            return;
+        }
 
         int gameID = conn.getGameID();
         String user = conn.getUserName();
@@ -291,7 +288,9 @@ public class WebSocketHandler {
     }
 
     private void handleLeave(ClientConnection conn) {
-        if (conn == null) return;
+        if (conn == null) {
+            return;
+        }
 
         int gameID = conn.getGameID();
         String user = conn.getUserName();

@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 public class ClientConnection {
-    private static final Gson gson = new Gson();
+    private static final Gson GSON = new Gson();
 
     private final String userName;
     private final Session session;
@@ -49,7 +49,9 @@ public class ClientConnection {
     }
 
     public void send(String message) {
-        if (!isOpen()) return;
+        if (!isOpen()) {
+            return;
+        }
         try {
             session.getRemote().sendString(message);
         } catch (IOException e) {
@@ -58,16 +60,22 @@ public class ClientConnection {
     }
 
     public void send(ServerMessage message) {
-        if (!isOpen()) return;
-        String json = gson.toJson(message);
+        if (!isOpen()) {
+            return;
+        }
+        String json = GSON.toJson(message);
         System.out.println("Sending to " + userName + ": " + json);
         send(json);
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (!(obj instanceof ClientConnection other)) return false;
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof ClientConnection other)) {
+            return false;
+        }
         return Objects.equals(session, other.session);
     }
 

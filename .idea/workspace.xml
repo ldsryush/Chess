@@ -4,14 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="updated dependency">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/server/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/main/java/server/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/server/Server.java" afterDir="false" />
+    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="deleted extra command">
+      <change beforePath="$PROJECT_DIR$/client/src/main/java/websocket/WebSocketFacade.java" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/main/java/websocket/WebSocketFacade.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/service/GameService.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/service/GameService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/ClientConnection.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/ClientConnection.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/ConnectionManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/ConnectionManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/NotificationHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/NotificationHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/commands/UserGameCommand.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/src/main/java/chess/ChessGame.java" beforeDir="false" afterPath="$PROJECT_DIR$/shared/src/main/java/chess/ChessGame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/src/main/java/model/ServerFacade.java" beforeDir="false" afterPath="$PROJECT_DIR$/shared/src/main/java/model/ServerFacade.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -372,7 +373,15 @@
       <option name="project" value="LOCAL" />
       <updated>1754589557664</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="deleted extra command">
+      <option name="closed" value="true" />
+      <created>1754591096444</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1754591096444</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -411,6 +420,7 @@
     <MESSAGE value="fixed notificationhandler and service" />
     <MESSAGE value="warapped games in response object" />
     <MESSAGE value="updated dependency" />
-    <option name="LAST_COMMIT_MESSAGE" value="updated dependency" />
+    <MESSAGE value="deleted extra command" />
+    <option name="LAST_COMMIT_MESSAGE" value="deleted extra command" />
   </component>
 </project>

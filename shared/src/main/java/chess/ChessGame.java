@@ -20,8 +20,12 @@ public class ChessGame {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof ChessGame other)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ChessGame other)) {
+            return false;
+        }
         return this.turn == other.turn && this.board.equals(other.board);
     }
 
@@ -73,7 +77,9 @@ public class ChessGame {
     public Collection<ChessMove> validMoves(ChessPosition startPosition) {
         Collection<ChessMove> allMoves = new HashSet<>();
         ChessPiece currentPiece = board.getPiece(startPosition);
-        if (currentPiece == null) return allMoves;
+        if (currentPiece == null) {
+            return allMoves;
+        }
 
         allMoves = currentPiece.pieceMoves(board, startPosition);
         addEnPassantMoves(currentPiece, startPosition, allMoves);
@@ -225,9 +231,13 @@ public class ChessGame {
             ChessPiece temp = board.getPiece(pos);
             board.removePiece(pos);
             board.addPiece(pos, new ChessPiece(team, ChessPiece.PieceType.KING));
-            if (isInCheck(team)) safe = false;
+            if (isInCheck(team)) {
+                safe = false;
+            }
             board.removePiece(pos);
-            if (temp != null) board.addPiece(pos, temp);
+            if (temp != null) {
+                board.addPiece(pos, temp);
+            }
         }
 
         board.addPiece(positions[0], saved);
@@ -335,14 +345,18 @@ public class ChessGame {
                     break;
                 }
             }
-            if (kingPos != null) break;
+            if (kingPos != null) {
+                break;
+            }
         }
 
         for (int r = 1; r <= 8; r++) {
             for (int c = 1; c <= 8; c++) {
                 ChessPosition pos = new ChessPosition(r, c);
                 ChessPiece p = board.getPiece(pos);
-                if (p == null || p.getTeamColor() == teamColor) continue;
+                if (p == null || p.getTeamColor() == teamColor) {
+                    continue;
+                }
                 for (ChessMove m : p.pieceMoves(board, pos)) {
                     if (m.getEndPosition().equals(kingPos)) {
                         return true;

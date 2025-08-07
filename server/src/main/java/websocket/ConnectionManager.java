@@ -33,15 +33,15 @@ public class ConnectionManager {
         return tokenToConnection.get(authToken);
     }
 
-    public List<ClientConnection> getConnectionsForGame(int gameID) {
-        return gameToConnections.getOrDefault(gameID, Collections.emptyList());
-    }
-
     public void removeConnection(Session session) {
-        if (!removedSessions.add(session)) return;
+        if (!removedSessions.add(session)) {
+            return;
+        }
 
         ClientConnection conn = sessionToConnection.remove(session);
-        if (conn == null) return;
+        if (conn == null) {
+            return;
+        }
 
         tokenToConnection.remove(conn.getAuthToken());
         gameToConnections.values().forEach(list -> list.remove(conn));

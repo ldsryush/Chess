@@ -96,7 +96,9 @@ public class GameService {
      */
     public void clearPlayerColor(int gameID, ChessGame.TeamColor color) throws DataAccessException {
         GameData game = gameDAO.getGame(gameID);
-        if (game == null) return;
+        if (game == null) {
+            return;
+        }
 
         String white = game.whiteUsername();
         String black = game.blackUsername();
