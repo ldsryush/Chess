@@ -100,16 +100,7 @@
             <artifactId>spark-core</artifactId>
             <version>2.9.3</version>
         </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-server</artifactId>
-            <version>9.4.43.v20210629</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-api</artifactId>
-            <version>9.4.43.v20210629</version>
-        </dependency>
+
 
         <dependency>
             <groupId>org.mindrot</groupId>

@@ -4,7 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="warapped games in response object" />
+    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="updated dependency">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/server/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/server/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/server/Server.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/ClientConnection.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/ClientConnection.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/ConnectionManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/ConnectionManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/commands/UserGameCommand.java" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -45,6 +53,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Downloaded.Files.Path.Enabled": "false",
+    "JUnit.ServerFacadeTests.executor": "Run",
     "JUnit.WebSocketTests.executor": "Run",
     "JUnit.java in shared.executor": "Run",
     "JUnit.server in server.executor": "Run",
@@ -66,7 +75,7 @@
       <recent name="C:\Users\ldsry\OneDrive\Desktop\cs240\Chess\server\src\test\java\passoff\server" />
     </key>
   </component>
-  <component name="RunManager" selected="JUnit.ServerFacadeTests">
+  <component name="RunManager" selected="JUnit.WebSocketTests">
     <configuration name="ServerFacadeTests" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="client" />
       <extension name="coverage">
@@ -123,10 +132,10 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.WebSocketTests" />
         <item itemvalue="JUnit.ServerFacadeTests" />
         <item itemvalue="JUnit.java in shared" />
         <item itemvalue="JUnit.server in server" />
-        <item itemvalue="JUnit.WebSocketTests" />
         <item itemvalue="JUnit.java in server" />
       </list>
     </recent_temporary>
@@ -355,7 +364,15 @@
       <option name="project" value="LOCAL" />
       <updated>1754587785778</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="updated dependency">
+      <option name="closed" value="true" />
+      <created>1754589557664</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1754589557664</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -393,6 +410,7 @@
     <MESSAGE value="fixed notificationhandler" />
     <MESSAGE value="fixed notificationhandler and service" />
     <MESSAGE value="warapped games in response object" />
-    <option name="LAST_COMMIT_MESSAGE" value="warapped games in response object" />
+    <MESSAGE value="updated dependency" />
+    <option name="LAST_COMMIT_MESSAGE" value="updated dependency" />
   </component>
 </project>

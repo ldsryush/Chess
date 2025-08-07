@@ -98,6 +98,7 @@ public class Server {
             }
         };
 
+        // Configure WebSocketHandler with dependencies
         WebSocketHandler.configure(
                 gameService,
                 authService,
@@ -187,7 +188,8 @@ public class Server {
         authService.authenticate(authToken);
         var games = listService.getGames();
         response.status(200);
-        return new Gson().toJson(new ListGamesResponse(games));    }
+        return new Gson().toJson(new ListGamesResponse(games));
+    }
 
     private Object createGame(Request request, Response response)
             throws ResponseException, DataAccessException {
