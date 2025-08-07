@@ -59,6 +59,7 @@ public class ClientConnection {
     public void send(ServerMessage message) {
         if (!isOpen()) return;
         String json = gson.toJson(message);
+        System.out.println("Sending to " + userName + ": " + json); // Optional debug log
         send(json);
     }
 
@@ -66,11 +67,11 @@ public class ClientConnection {
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (!(obj instanceof ClientConnection other)) return false;
-        return Objects.equals(userName, other.userName);
+        return Objects.equals(session, other.session);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(userName);
+        return Objects.hash(session);
     }
 }

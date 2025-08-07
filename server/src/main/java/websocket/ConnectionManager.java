@@ -21,7 +21,7 @@ public class ConnectionManager {
                 .computeIfAbsent(gameID, k -> new ArrayList<>())
                 .add(connection);
 
-        System.out.println("📌 Added connection for " + connection.getUserName()
+        System.out.println("Added connection for " + connection.getUserName()
                 + " (" + connection.getPlayerColor() + ") to game " + gameID);
     }
 

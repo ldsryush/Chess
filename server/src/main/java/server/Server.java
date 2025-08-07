@@ -11,6 +11,11 @@ import model.*;
 import service.*;
 import spark.Spark;
 import websocket.WebSocketHandler;
+import websocket.NotificationHandler;
+import websocket.ConnectionManager;
+import websocket.ClientConnection;
+import websocket.messages.LoadGameMessage;
+import websocket.messages.NotificationMessage;
 
 import java.util.Collection;
 
@@ -49,10 +54,44 @@ public class Server {
         Spark.port(desiredPort);
         Spark.staticFiles.location("web");
 
-        // inject dependencies into your WebSocket handler
-        WebSocketHandler.configure(gameService, authService, joinService);
+        // Create ConnectionManager and NotificationHandler
+        ConnectionManager connectionManager = new ConnectionManager();
+        NotificationHandler handler = new NotificationHandler() {
+            @Override
+            public void notify(ClientConnection recipient, NotificationMessage message) {
+                recipient.send(message);
+            }
 
-        // register WebSocket by handler class (Spark will use its no-arg ctor)
+            @Override
+            public void loadGame(ClientConnection recipient, LoadGameMessage message) {
+                recipient.send(message);
+            }
+
+            @Override
+            public void error(ClientConnection recipient, websocket.messages.ErrorMessage message) {
+                recipient.send(message);
+            }
+
+            @Override
+            public void notifyOthers(ClientConnection sender, LoadGameMessage message) {
+                connectionManager.broadcastToOthers(sender.getGameID(), sender, message);
+            }
+
+            @Override
+            public void notifyOthers(ClientConnection sender, NotificationMessage message) {
+                connectionManager.broadcastToOthers(sender.getGameID(), sender, message);
+            }
+
+            @Override
+            public void notifyGame(int gameID, NotificationMessage message) {
+                connectionManager.broadcastToGame(gameID, message);
+            }
+        };
+
+        // Inject dependencies into your WebSocket handler
+        WebSocketHandler.configure(gameService, authService, joinService, handler);
+
+        // Register WebSocket endpoint
         Spark.webSocket("/ws", WebSocketHandler.class);
 
         // HTTP routes
@@ -170,10 +209,8 @@ public class Server {
         var authToken = request.headers("authorization");
         authService.authenticate(authToken);
         AuthData authData = authService.getAuthData(authToken);
-
         int gameID = Integer.parseInt(request.params(":gameID"));
         joinService.observeGame(gameID, authData);
-
         response.status(200);
         return "{}";
     }

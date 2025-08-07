@@ -7,7 +7,6 @@ import model.AuthData;
 import model.JoinGameRequest;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
-import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import service.AuthenticationService;
 import service.GameService;
 import service.JoinService;
@@ -25,11 +24,13 @@ public class WebSocketHandler {
     private static GameService gameService;
     private static AuthenticationService authService;
     private static JoinService joinService;
+    private static NotificationHandler notificationHandler;
 
-    public static void configure(GameService gs, AuthenticationService as, JoinService js) {
+    public static void configure(GameService gs, AuthenticationService as, JoinService js, NotificationHandler nh) {
         gameService = gs;
         authService = as;
         joinService = js;
+        notificationHandler = nh;
     }
 
     private final ConnectionManager connectionManager = new ConnectionManager();
@@ -129,13 +130,13 @@ public class WebSocketHandler {
             connectionManager.addConnection(gameID, conn);
 
             ChessGame game = gameService.getGameData(gameID).game();
-            conn.send(new LoadGameMessage(game, color));
+            notificationHandler.loadGame(conn, new LoadGameMessage(game, color));
 
             String roleMsg = switch (color) {
                 case "white", "black" -> user + " connected to the game as " + color;
                 default -> user + " connected as observer";
             };
-            connectionManager.broadcastToOthers(gameID, conn, new NotificationMessage(roleMsg));
+            notificationHandler.notifyOthers(conn, new NotificationMessage(roleMsg));
 
         } catch (ResponseException | DataAccessException e) {
             sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
@@ -151,7 +152,7 @@ public class WebSocketHandler {
         try {
             AuthData auth = authService.getAuthData(cmd.getAuthToken());
             if (auth == null || !auth.username().equals(user)) {
-                conn.send(new ErrorMessage("Invalid auth token"));
+                notificationHandler.error(conn, new ErrorMessage("Invalid auth token"));
                 return;
             }
 
@@ -162,20 +163,16 @@ public class WebSocketHandler {
                     || (game.getTeamTurn() == ChessGame.TeamColor.BLACK && user.equals(data.blackUsername()));
 
             if (!validTurn) {
-                conn.send(new ErrorMessage("Invalid move: not your turn"));
+                notificationHandler.error(conn, new ErrorMessage("Invalid move: not your turn"));
                 return;
             }
 
             gameService.makeMove(gameID, user, cmd.getMove());
             ChessGame updated = gameService.getGameData(gameID).game();
 
-            // Send updated game state to root client
-            conn.send(new LoadGameMessage(updated, conn.getPlayerColor()));
+            notificationHandler.loadGame(conn, new LoadGameMessage(updated, conn.getPlayerColor()));
+            notificationHandler.notifyOthers(conn, new LoadGameMessage(updated, conn.getPlayerColor()));
 
-            // Broadcast updated game state to others
-            connectionManager.broadcastToOthers(gameID, conn, new LoadGameMessage(updated, conn.getPlayerColor()));
-
-            // Broadcast move notification
             var mv = cmd.getMove();
             var piece = updated.getBoard().getPiece(mv.getEndPosition());
             String text = String.format("%s moved %s from %s to %s",
@@ -183,25 +180,24 @@ public class WebSocketHandler {
                     piece != null ? piece.getPieceType() : "a piece",
                     mv.getStartPosition(),
                     mv.getEndPosition());
-            connectionManager.broadcastToOthers(gameID, conn, new NotificationMessage(text));
+            notificationHandler.notifyOthers(conn, new NotificationMessage(text));
 
-            // Checkmate or check notification
             if (updated.isGameOver()) {
                 String loser = updated.getTeamTurn() == ChessGame.TeamColor.WHITE
                         ? data.whiteUsername()
                         : data.blackUsername();
-                connectionManager.broadcastToGame(gameID, new NotificationMessage(loser + " is in checkmate"));
+                notificationHandler.notifyGame(gameID, new NotificationMessage(loser + " is in checkmate"));
             } else if (updated.isInCheck(updated.getTeamTurn())) {
                 String checkedPlayer = updated.getTeamTurn() == ChessGame.TeamColor.WHITE
                         ? data.whiteUsername()
                         : data.blackUsername();
-                connectionManager.broadcastToGame(gameID, new NotificationMessage(checkedPlayer + " is in check"));
+                notificationHandler.notifyGame(gameID, new NotificationMessage(checkedPlayer + " is in check"));
             }
 
         } catch (ResponseException | DataAccessException e) {
-            conn.send(new ErrorMessage("Move failed: " + e.getMessage()));
+            notificationHandler.error(conn, new ErrorMessage("Move failed: " + e.getMessage()));
         } catch (Exception e) {
-            conn.send(new ErrorMessage("Unexpected error: " + e.getMessage()));
+            notificationHandler.error(conn, new ErrorMessage("Unexpected error: " + e.getMessage()));
         }
     }
 
@@ -215,22 +211,22 @@ public class WebSocketHandler {
             var data = gameService.getGameData(gameID);
 
             if (!user.equals(data.whiteUsername()) && !user.equals(data.blackUsername())) {
-                conn.send(new ErrorMessage("Only players can resign"));
+                notificationHandler.error(conn, new ErrorMessage("Only players can resign"));
                 return;
             }
 
             if (data.game().isGameOver()) {
-                conn.send(new ErrorMessage("Game already over"));
+                notificationHandler.error(conn, new ErrorMessage("Game already over"));
                 return;
             }
 
             gameService.resignPlayer(gameID, user);
-            connectionManager.broadcastToGame(gameID, new NotificationMessage(user + " resigned the game"));
+            notificationHandler.notifyGame(gameID, new NotificationMessage(user + " resigned the game"));
 
         } catch (ResponseException | DataAccessException e) {
-            conn.send(new ErrorMessage("Resign failed: " + e.getMessage()));
+            notificationHandler.error(conn, new ErrorMessage("Resign failed: " + e.getMessage()));
         } catch (Exception e) {
-            conn.send(new ErrorMessage("Unexpected error: " + e.getMessage()));
+            notificationHandler.error(conn, new ErrorMessage("Unexpected error: " + e.getMessage()));
         }
     }
 
@@ -249,7 +245,7 @@ public class WebSocketHandler {
                 gameService.clearPlayerColor(gameID, ChessGame.TeamColor.BLACK);
             }
 
-            connectionManager.broadcastToGame(gameID, new NotificationMessage(user + " left the game"));
+            notificationHandler.notifyGame(gameID, new NotificationMessage(user + " left the game"));
 
         } catch (ResponseException | DataAccessException e) {
             System.err.println("Leave cleanup failed: " + e.getMessage());
