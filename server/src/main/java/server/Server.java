@@ -68,11 +68,6 @@ public class Server {
 
         NotificationHandler handler = new NotificationHandler() {
             @Override
-            public void notify(ClientConnection recipient, NotificationMessage message) {
-                recipient.send(message);
-            }
-
-            @Override
             public void loadGame(ClientConnection recipient, LoadGameMessage message) {
                 recipient.send(message);
             }
