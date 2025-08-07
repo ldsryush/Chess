@@ -45,13 +45,17 @@ public class ConnectionManager {
 
         tokenToConnection.remove(conn.getAuthToken());
         gameToConnections.values().forEach(list -> list.remove(conn));
+
+        System.out.println("❌ Removed connection for " + conn.getUserName());
     }
 
     public void broadcastToGame(int gameID, ServerMessage message) {
         List<ClientConnection> conns = gameToConnections.get(gameID);
         if (conns != null) {
             for (ClientConnection c : conns) {
-                c.send(message);
+                if (c.isOpen()) {
+                    c.send(message);
+                }
             }
         }
     }
@@ -62,7 +66,7 @@ public class ConnectionManager {
         List<ClientConnection> conns = gameToConnections.get(gameID);
         if (conns != null) {
             for (ClientConnection c : conns) {
-                if (!c.equals(sender)) {
+                if (!c.equals(sender) && c.isOpen()) {
                     c.send(message);
                 }
             }
