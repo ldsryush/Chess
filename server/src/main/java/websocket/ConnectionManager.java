@@ -1,7 +1,7 @@
 package websocket;
 
-import websocket.messages.ServerMessage;
 import org.eclipse.jetty.websocket.api.Session;
+import websocket.messages.ServerMessage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,81 +11,61 @@ public class ConnectionManager {
     private final Map<Session, ClientConnection> sessionToConnection = new ConcurrentHashMap<>();
     private final Map<String, ClientConnection> tokenToConnection = new ConcurrentHashMap<>();
     private final Map<Integer, List<ClientConnection>> gameToConnections = new ConcurrentHashMap<>();
-    private final Set<Session> removedSessions = ConcurrentHashMap.newKeySet(); // Prevent double cleanup
+    private final Set<Session> removedSessions = ConcurrentHashMap.newKeySet();
 
     public void addConnection(int gameID, ClientConnection connection) {
         Session session = connection.getSession();
         sessionToConnection.put(session, connection);
         tokenToConnection.put(connection.getAuthToken(), connection);
-        gameToConnections.computeIfAbsent(gameID, k -> new ArrayList<>()).add(connection);
-        System.out.println("📌 Added connection for " + connection.getUserName() + " to game " + gameID);
+        gameToConnections
+                .computeIfAbsent(gameID, k -> new ArrayList<>())
+                .add(connection);
+
+        System.out.println("📌 Added connection for " + connection.getUserName()
+                + " (" + connection.getPlayerColor() + ") to game " + gameID);
     }
 
     public ClientConnection getConnection(Session session) {
-        System.out.println("🔍 Looking up session: " + session);
         return sessionToConnection.get(session);
     }
 
     public ClientConnection getConnection(String authToken) {
-        ClientConnection conn = tokenToConnection.get(authToken);
-        System.out.println(conn != null ? "✅ Found connection for token: " + authToken
-                : "⚠️ No connection found for token: " + authToken);
-        return conn;
+        return tokenToConnection.get(authToken);
     }
 
-    public int getGameID(ClientConnection connection) {
-        for (var entry : gameToConnections.entrySet()) {
-            if (entry.getValue().contains(connection)) {
-                return entry.getKey();
-            }
-        }
-        return -1;
+    public List<ClientConnection> getConnectionsForGame(int gameID) {
+        return gameToConnections.getOrDefault(gameID, Collections.emptyList());
     }
 
     public void removeConnection(Session session) {
-        if (removedSessions.contains(session)) {
-            System.out.println("ℹ️ Skipping removal — session already cleaned up.");
-            return;
-        }
-        removedSessions.add(session);
+        if (!removedSessions.add(session)) return;
 
-        ClientConnection connection = sessionToConnection.remove(session);
-        if (connection == null) {
-            System.out.println("ℹ️ Skipping removal — no connection found for session.");
-            return;
-        }
+        ClientConnection conn = sessionToConnection.remove(session);
+        if (conn == null) return;
 
-        tokenToConnection.remove(connection.getAuthToken());
-
-        for (var connections : gameToConnections.values()) {
-            connections.remove(connection);
-        }
+        tokenToConnection.remove(conn.getAuthToken());
+        gameToConnections.values().forEach(list -> list.remove(conn));
     }
 
     public void broadcastToGame(int gameID, ServerMessage message) {
-        List<ClientConnection> connections = gameToConnections.get(gameID);
-        if (connections != null) {
-            System.out.println("📣 Broadcasting to all in game " + gameID + ": " + message);
-            for (ClientConnection conn : connections) {
-                conn.send(message);
+        List<ClientConnection> conns = gameToConnections.get(gameID);
+        if (conns != null) {
+            for (ClientConnection c : conns) {
+                c.send(message);
             }
-        } else {
-            System.out.println("⚠️ No connections found for game " + gameID);
         }
     }
 
-    public void broadcastToOthers(int gameID, ClientConnection sender, ServerMessage message) {
-        List<ClientConnection> connections = gameToConnections.get(gameID);
-        if (connections != null) {
-            System.out.println("📣 Broadcasting to others in game " + gameID + ": " + message);
-            for (ClientConnection conn : connections) {
-                if (!conn.equals(sender)) {
-                    System.out.println("➡️ Sending to: " + conn.getUserName());
-                    conn.send(message);
+    public void broadcastToOthers(int gameID,
+                                  ClientConnection sender,
+                                  ServerMessage message) {
+        List<ClientConnection> conns = gameToConnections.get(gameID);
+        if (conns != null) {
+            for (ClientConnection c : conns) {
+                if (!c.equals(sender)) {
+                    c.send(message);
                 }
             }
-        } else {
-            System.out.println("⚠️ No connections found for game " + gameID);
         }
     }
 }
