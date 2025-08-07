@@ -11,21 +11,16 @@ public class ClientConnection {
     private final String userName;
     private final Session session;
     private final String authToken;
-    private final int gameID;
-    private final String playerColor;
-
     private static final Gson gson = new Gson();
 
-    public ClientConnection(String userName,
-                            Session session,
-                            String authToken,
-                            int gameID,
-                            String playerColor) {
+    public ClientConnection(String userName, Session session, String authToken) {
         this.userName = userName;
         this.session = session;
         this.authToken = authToken;
-        this.gameID = gameID;
-        this.playerColor = playerColor;
+    }
+
+    public Session getSession() {
+        return session;
     }
 
     public String getUserName() {
@@ -36,45 +31,42 @@ public class ClientConnection {
         return authToken;
     }
 
-    public int getGameID() {
-        return gameID;
-    }
-
-    public String getPlayerColor() {
-        return playerColor;
-    }
-
-    public Session getSession() {
-        return session;
-    }
-
     public boolean isOpen() {
         return session != null && session.isOpen();
     }
 
     public void send(String message) {
-        try {
-            if (isOpen()) {
+        if (isOpen()) {
+            try {
                 session.getRemote().sendString(message);
+            } catch (IOException e) {
+                System.err.println("Failed to send message to " + userName + ": " + e.getMessage());
             }
-        } catch (IOException e) {
-            System.err.println("Failed to send message to " + userName + ": " + e.getMessage());
+        } else {
+            System.out.println("ℹ️ Skipping send — session closed for " + userName);
         }
     }
 
     public void send(ServerMessage message) {
-        send(gson.toJson(message));
+        if (!isOpen()) {
+            System.out.println("Skipping send — session closed for " + userName);
+            return;
+        }
+        String json = gson.toJson(message);
+        System.out.println("Sent to " + userName + ": " + json);
+        send(json);
     }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (!(obj instanceof ClientConnection other)) return false;
-        return Objects.equals(authToken, other.authToken);
+        if (!(obj instanceof ClientConnection)) return false;
+        ClientConnection other = (ClientConnection) obj;
+        return Objects.equals(userName, other.userName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(authToken);
+        return Objects.hash(userName);
     }
 }
