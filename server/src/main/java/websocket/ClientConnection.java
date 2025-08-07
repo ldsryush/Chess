@@ -1,6 +1,6 @@
 package websocket;
 
-import javax.websocket.Session;
+import org.eclipse.jetty.websocket.api.Session;
 import websocket.messages.ServerMessage;
 
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class ClientConnection {
     public void send(String message) {
         if (!isOpen()) return;
         try {
-            session.getBasicRemote().sendText(message);
+            session.getRemote().sendString(message);
         } catch (IOException e) {
             System.err.println("Failed to send message to " + userName + ": " + e.getMessage());
         }

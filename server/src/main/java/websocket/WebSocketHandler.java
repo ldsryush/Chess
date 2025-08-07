@@ -5,6 +5,9 @@ import dataaccess.DataAccessException;
 import exception.ResponseException;
 import model.AuthData;
 import model.JoinGameRequest;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.annotations.*;
+import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import service.AuthenticationService;
 import service.GameService;
 import service.JoinService;
@@ -12,13 +15,11 @@ import websocket.commands.UserGameCommand;
 import websocket.commands.UserGameCommand.CommandType;
 import websocket.messages.*;
 
-import javax.websocket.*;
-import javax.websocket.server.ServerEndpoint;
-import java.io.IOException;
-
 import static websocket.GsonFactory.gson;
 
-@ServerEndpoint(value = "/connect")
+import java.io.IOException;
+
+@WebSocket
 public class WebSocketHandler {
 
     private static GameService gameService;
@@ -33,39 +34,56 @@ public class WebSocketHandler {
 
     private final ConnectionManager connectionManager = new ConnectionManager();
 
-    @OnOpen
-    public void onOpen(Session session) {
-        System.out.println("Client connected: " + session.getId());
+    @OnWebSocketConnect
+    public void onConnect(Session session) {
+        System.out.println("Client connected: " + session.getRemoteAddress());
     }
 
-    @OnMessage
-    public void onMessage(String json, Session session) {
-        System.out.println("Received: " + json);
+    @OnWebSocketMessage
+    public void onMessage(Session session, String message) {
+        System.out.println("Received: " + message);
         try {
-            UserGameCommand cmd = gson.fromJson(json, UserGameCommand.class);
+            UserGameCommand cmd = gson.fromJson(message, UserGameCommand.class);
             CommandType type = cmd.getCommandType();
 
             switch (type) {
                 case CONNECT -> handleConnect(session, cmd);
-                case MAKE_MOVE -> handleMove(connectionManager.getConnection(session), cmd);
-                case RESIGN -> handleResign(connectionManager.getConnection(session));
-                case LEAVE -> handleLeave(connectionManager.getConnection(cmd.getAuthToken()));
-                default -> sendRaw(session, new ErrorMessage("Unknown command"));
+                case MAKE_MOVE, RESIGN -> {
+                    ClientConnection conn = connectionManager.getConnection(session);
+                    if (conn == null) {
+                        sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
+                        return;
+                    }
+                    if (type == CommandType.MAKE_MOVE) {
+                        handleMove(conn, cmd);
+                    } else {
+                        handleResign(conn);
+                    }
+                }
+                case LEAVE -> {
+                    ClientConnection conn = connectionManager.getConnection(cmd.getAuthToken());
+                    if (conn == null) {
+                        sendRaw(session, gson.toJson(new ErrorMessage("No active connection")));
+                        return;
+                    }
+                    handleLeave(conn);
+                }
+                default -> sendRaw(session, gson.toJson(new ErrorMessage("Unknown command")));
             }
 
         } catch (Exception e) {
-            sendRaw(session, new ErrorMessage("Invalid command format"));
+            sendRaw(session, gson.toJson(new ErrorMessage("Invalid command format")));
         }
     }
 
-    @OnClose
-    public void onClose(Session session, CloseReason reason) {
-        System.out.println("Client disconnected: " + session.getId() + " Reason: " + reason);
+    @OnWebSocketClose
+    public void onClose(Session session, int status, String reason) {
+        System.out.println("Client disconnected: " + session.getRemoteAddress() + " Reason: " + reason);
         ClientConnection conn = connectionManager.getConnection(session);
         if (conn != null) handleLeave(conn);
     }
 
-    @OnError
+    @OnWebSocketError
     public void onError(Session session, Throwable error) {
         System.err.println("WebSocket error: " + error.getMessage());
         ClientConnection conn = connectionManager.getConnection(session);
@@ -76,7 +94,7 @@ public class WebSocketHandler {
         try {
             AuthData auth = authService.getAuthData(cmd.getAuthToken());
             if (auth == null) {
-                sendRaw(session, new ErrorMessage("Invalid auth token"));
+                sendRaw(session, gson.toJson(new ErrorMessage("Invalid auth token")));
                 return;
             }
 
@@ -120,22 +138,23 @@ public class WebSocketHandler {
             connectionManager.broadcastToOthers(gameID, conn, new NotificationMessage(roleMsg));
 
         } catch (ResponseException | DataAccessException e) {
-            sendRaw(session, new ErrorMessage("Connect failed: " + e.getMessage()));
+            sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
         } catch (Exception e) {
-            sendRaw(session, new ErrorMessage("Unexpected error: " + e.getMessage()));
+            sendRaw(session, gson.toJson(new ErrorMessage("Unexpected error: " + e.getMessage())));
         }
     }
 
     private void handleMove(ClientConnection conn, UserGameCommand cmd) {
-        if (conn == null) {
-            sendRaw(cmd.getAuthToken(), new ErrorMessage("No active connection"));
-            return;
-        }
-
         int gameID = conn.getGameID();
         String user = conn.getUserName();
 
         try {
+            AuthData auth = authService.getAuthData(cmd.getAuthToken());
+            if (auth == null || !auth.username().equals(user)) {
+                conn.send(new ErrorMessage("Invalid auth token"));
+                return;
+            }
+
             var data = gameService.getGameData(gameID);
             ChessGame game = data.game();
 
@@ -150,9 +169,13 @@ public class WebSocketHandler {
             gameService.makeMove(gameID, user, cmd.getMove());
             ChessGame updated = gameService.getGameData(gameID).game();
 
+            // Send updated game state to root client
             conn.send(new LoadGameMessage(updated, conn.getPlayerColor()));
+
+            // Broadcast updated game state to others
             connectionManager.broadcastToOthers(gameID, conn, new LoadGameMessage(updated, conn.getPlayerColor()));
 
+            // Broadcast move notification
             var mv = cmd.getMove();
             var piece = updated.getBoard().getPiece(mv.getEndPosition());
             String text = String.format("%s moved %s from %s to %s",
@@ -162,6 +185,7 @@ public class WebSocketHandler {
                     mv.getEndPosition());
             connectionManager.broadcastToOthers(gameID, conn, new NotificationMessage(text));
 
+            // Checkmate or check notification
             if (updated.isGameOver()) {
                 String loser = updated.getTeamTurn() == ChessGame.TeamColor.WHITE
                         ? data.whiteUsername()
@@ -234,16 +258,11 @@ public class WebSocketHandler {
         }
     }
 
-    private void sendRaw(Session session, ServerMessage message) {
+    private void sendRaw(Session session, String json) {
         try {
-            session.getBasicRemote().sendText(gson.toJson(message));
+            session.getRemote().sendString(json);
         } catch (IOException e) {
             System.err.println("Failed to send message: " + e.getMessage());
         }
-    }
-
-    private void sendRaw(String authToken, ServerMessage message) {
-        ClientConnection conn = connectionManager.getConnection(authToken);
-        if (conn != null) sendRaw(conn.getSession(), message);
     }
 }
