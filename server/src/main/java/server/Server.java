@@ -73,6 +73,11 @@ public class Server {
             }
 
             @Override
+            public void updateGame(ClientConnection recipient, LoadGameMessage message) {
+                recipient.send(message); // ✅ This is the missing method
+            }
+
+            @Override
             public void error(ClientConnection recipient, websocket.messages.ErrorMessage message) {
                 recipient.send(message);
             }
@@ -92,6 +97,7 @@ public class Server {
                 connectionManager.broadcastToGame(gameID, message);
             }
         };
+
 
         // Configure WebSocketHandler with dependencies
         WebSocketHandler.configure(

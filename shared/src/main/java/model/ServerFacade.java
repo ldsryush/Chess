@@ -67,6 +67,15 @@ public class ServerFacade {
         makeRequest("DELETE", path, null, null, true);
     }
 
+    // Add these getter methods for WebSocket support
+    public String getAuthToken() {
+        return authToken;
+    }
+
+    public String getServerUrl() {
+        return serverUrl;
+    }
+
     private <T> T makeRequest(String method, String path, Object request,
                               Class<T> responseClass, boolean requiresAuth) throws ResponseException {
         try {

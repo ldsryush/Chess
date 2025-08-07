@@ -8,6 +8,7 @@ public interface NotificationHandler {
 
     // Send to one client
     void loadGame(ClientConnection recipient, LoadGameMessage message);
+    void updateGame(ClientConnection recipient, LoadGameMessage message);
     void error(ClientConnection recipient, ErrorMessage message);
 
     // Broadcast to others in the same game

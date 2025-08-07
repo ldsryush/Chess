@@ -17,6 +17,7 @@ public class Client {
     private final Repl repl;
     private ArrayList<GameResponseData> allGames;
     private String playerColor;
+    private Integer currentGameID;
 
     public Client(String serverUrl, Repl repl) {
         server = new ServerFacade(serverUrl);
@@ -37,6 +38,7 @@ public class Client {
                 case "list"     -> listGames();
                 case "join"     -> joinGame(params);
                 case "observe"  -> observeGame(params);
+                case "redraw"   -> redrawBoard();
                 case "cleardb"  -> clearDataBase();
                 case "quit"     -> "quit";
                 default         -> help();
@@ -49,13 +51,14 @@ public class Client {
     public String help() {
         String[] commands = {
                 "create <NAME>", "list", "join <ID> [WHITE|BLACK]",
-                "observe <ID>", "logout", "quit", "help"
+                "observe <ID>", "redraw", "logout", "quit", "help"
         };
         String[] description = {
                 "create a game with specified name",
                 "list all games",
                 "joins a game to play",
                 "watch a game",
+                "redraw the current board",
                 "logs you out",
                 "finished playing",
                 "list possible commands"
@@ -82,6 +85,21 @@ public class Client {
         return sb.toString();
     }
 
+    private String redrawBoard() {
+        if (playerColor == null || currentGameID == null) {
+            return "No active game. Join or observe a game first.";
+        }
+
+        try {
+            System.out.println("\n" + SET_TEXT_COLOR_GREEN + "Redrawing board..." + SET_TEXT_COLOR_WHITE);
+            BoardDisplay.main(new String[]{playerColor});
+            System.out.println(SET_TEXT_COLOR_BLUE + "\nBoard redrawn. Use 'redraw' to refresh again." + SET_TEXT_COLOR_WHITE);
+            return "";
+        } catch (Exception e) {
+            return "Error displaying board: " + e.getMessage();
+        }
+    }
+
     private String joinGame(String[] params) {
         if (state == State.LOGGED_OUT) {
             return "Must login first";
@@ -106,6 +124,51 @@ public class Client {
         }
     }
 
+    private String joinGameWithColor(String colorParam, GameResponseData game) {
+        String color = colorParam.toUpperCase();
+
+        if ("WHITE".equals(color)) {
+            if (game.whiteUsername() != null) {
+                return "Can't join as white";
+            }
+        } else if ("BLACK".equals(color)) {
+            if (game.blackUsername() != null) {
+                return "Can't join as black";
+            }
+        } else {
+            return "Invalid color.";
+        }
+
+        try {
+            server.joinGame(new JoinGameRequest(color, game.gameID()));
+            playerColor = color;
+            currentGameID = game.gameID();
+
+            System.out.println("\n" + SET_TEXT_COLOR_GREEN + "Successfully joined game as " + color + "!" + SET_TEXT_COLOR_WHITE);
+            System.out.println(SET_TEXT_COLOR_YELLOW + "Displaying initial board..." + SET_TEXT_COLOR_WHITE);
+
+            // Show the initial board
+            BoardDisplay.main(new String[]{playerColor});
+
+            System.out.println("\n" + SET_TEXT_COLOR_BLUE + "Use 'redraw' to refresh the board." + SET_TEXT_COLOR_WHITE);
+
+            // Launch interactive gameplay
+            String authToken = server.getAuthToken();
+            String serverUrl = server.getServerUrl();
+
+            GameplayClient gameplayClient = new GameplayClient(serverUrl, authToken, game.gameID());
+            gameplayClient.setPlayerColor(color.toLowerCase());
+            gameplayClient.run();
+
+            return "";
+
+        } catch (ResponseException e) {
+            return "Can't join as " + color.toLowerCase();
+        } catch (Exception e) {
+            return "Failed to start game: " + e.getMessage();
+        }
+    }
+
     private String observeGame(String[] params) {
         if (state == State.LOGGED_OUT) {
             return "Must login first";
@@ -125,39 +188,35 @@ public class Client {
             updateGames();
             GameResponseData game = allGames.get(idx - 1);
             server.observeGame(game.gameID());
-            BoardDisplay.main(new String[]{"WHITE"});
+
+            playerColor = "WHITE"; // Default view for observers
+            currentGameID = game.gameID();
+
+            System.out.println("\n" + SET_TEXT_COLOR_GREEN + "Successfully joined as observer!" + SET_TEXT_COLOR_WHITE);
+            System.out.println(SET_TEXT_COLOR_YELLOW + "Displaying initial board..." + SET_TEXT_COLOR_WHITE);
+
+            // Show the initial board
+            BoardDisplay.main(new String[]{playerColor});
+
+            System.out.println("\n" + SET_TEXT_COLOR_BLUE + "Use 'redraw' to refresh the board." + SET_TEXT_COLOR_WHITE);
+
+            // Launch interactive gameplay as observer
+            String authToken = server.getAuthToken();
+            String serverUrl = server.getServerUrl();
+
+            GameplayClient gameplayClient = new GameplayClient(serverUrl, authToken, game.gameID());
+            gameplayClient.setPlayerColor("observer");
+            gameplayClient.run();
+
             return "";
+
         } catch (IndexOutOfBoundsException e) {
             return "Requested game doesn't exist";
         } catch (ResponseException e) {
             return "Observe failed: " + e.getMessage();
+        } catch (Exception e) {
+            return "Failed to start observation: " + e.getMessage();
         }
-    }
-
-    private String joinGameWithColor(String colorParam, GameResponseData game) {
-        String color = colorParam.toUpperCase();
-
-        if ("WHITE".equals(color)) {
-            if (game.whiteUsername() != null) {
-                return "Can't join as white";
-            }
-        } else if ("BLACK".equals(color)) {
-            if (game.blackUsername() != null) {
-                return "Can't join as black";
-            }
-        } else {
-            return "Invalid color.";
-        }
-
-        try {
-            server.joinGame(new JoinGameRequest(color, game.gameID()));
-            playerColor = color;
-        } catch (ResponseException e) {
-            return "Can't join as " + color.toLowerCase();
-        }
-
-        BoardDisplay.main(new String[]{playerColor});
-        return "";
     }
 
     private String listGames() {
@@ -192,6 +251,8 @@ public class Client {
             return "Must login first";
         }
         state = State.LOGGED_OUT;
+        playerColor = null;
+        currentGameID = null;
         try {
             server.logoutUser();
         } catch (ResponseException e) {

@@ -1,6 +1,7 @@
 package websocket;
 
 import chess.ChessGame;
+import com.google.gson.GsonBuilder;
 import dataaccess.DataAccessException;
 import exception.ResponseException;
 import model.AuthData;
@@ -21,7 +22,9 @@ import java.io.IOException;
 @WebSocket
 public class WebSocketHandler {
 
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(ServerMessage.class, new ServerMessageDeserializer())
+            .create();
 
     private static GameService gameService;
     private static AuthenticationService authService;
@@ -219,7 +222,7 @@ public class WebSocketHandler {
             gameService.makeMove(gameID, user, cmd.getMove());
             ChessGame updated = gameService.getGameData(gameID).game();
 
-            notificationHandler.loadGame(conn, new LoadGameMessage(updated, conn.getPlayerColor()));
+            notificationHandler.updateGame(conn, new LoadGameMessage(updated, conn.getPlayerColor()));
             notificationHandler.notifyOthers(conn, new LoadGameMessage(updated, conn.getPlayerColor()));
 
             var mv = cmd.getMove();

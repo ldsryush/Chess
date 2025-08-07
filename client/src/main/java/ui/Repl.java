@@ -1,6 +1,5 @@
 package ui;
 
-
 import java.util.Scanner;
 
 import static ui.EscapeSequences.*;
@@ -26,7 +25,9 @@ public class Repl {
 
             try {
                 result = client.eval(line);
-                System.out.print(SET_TEXT_COLOR_BLUE + result);
+                if (!result.isEmpty()) {
+                    System.out.print(SET_TEXT_COLOR_BLUE + result);
+                }
             } catch (Throwable e) {
                 var msg = e.toString();
                 System.out.print(msg);
@@ -36,7 +37,8 @@ public class Repl {
         System.out.println();
     }
 
-    private void printPrompt() {
-        System.out.print(SET_TEXT_COLOR_BLACK + "\n" + "[" + Client.state + "] >>> " + SET_TEXT_COLOR_GREEN);
+    public void printPrompt() {
+        String stateDisplay = Client.state == State.IN_GAME ? "IN_GAME" : Client.state.toString();
+        System.out.print(SET_TEXT_COLOR_BLACK + "\n" + "[" + stateDisplay + "] >>> " + SET_TEXT_COLOR_GREEN);
     }
 }

@@ -4,7 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="updated styling to fit autograder" />
+    <list default="true" id="a7f9ff07-6a8c-4de0-993c-38056e20e470" name="Changes" comment="deleted unused Notify from server">
+      <change afterPath="$PROJECT_DIR$/client/src/main/java/ui/GameplayClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/src/main/java/ui/GameplayUI.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/src/main/java/websocket/ClientNotificationHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/main/java/ui/BoardDisplay.java" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/main/java/ui/BoardDisplay.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/main/java/ui/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/main/java/ui/Client.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/main/java/ui/EscapeSequences.java" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/main/java/ui/EscapeSequences.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/main/java/ui/Repl.java" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/main/java/ui/Repl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/main/java/ui/State.java" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/main/java/ui/State.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/main/java/websocket/WebSocketFacade.java" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/main/java/websocket/WebSocketFacade.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/server/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/server/Server.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/NotificationHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/NotificationHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main/java/websocket/WebSocketHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/src/main/java/model/ServerFacade.java" beforeDir="false" afterPath="$PROJECT_DIR$/shared/src/main/java/model/ServerFacade.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/src/main/java/websocket/commands/UserGameCommand.java" beforeDir="false" afterPath="$PROJECT_DIR$/shared/src/main/java/websocket/commands/UserGameCommand.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -44,6 +60,8 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Application.Main (1).executor": "Run",
+    "Application.Main.executor": "Run",
     "Downloaded.Files.Path.Enabled": "false",
     "JUnit.ServerFacadeTests.executor": "Run",
     "JUnit.WebSocketTests.executor": "Run",
@@ -54,6 +72,7 @@
     "Repository.Attach.JavaDocs": "false",
     "Repository.Attach.Sources": "false",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "main",
     "last_opened_file_path": "C:/Users/ldsry/OneDrive/Desktop/cs240/Chess",
@@ -67,7 +86,21 @@
       <recent name="C:\Users\ldsry\OneDrive\Desktop\cs240\Chess\server\src\test\java\passoff\server" />
     </key>
   </component>
-  <component name="RunManager" selected="JUnit.WebSocketTests">
+  <component name="RunManager" selected="Application.Main (1)">
+    <configuration name="Main (1)" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <module name="client" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <module name="server" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="ServerFacadeTests" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="client" />
       <extension name="coverage">
@@ -98,14 +131,6 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="java in server" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="server" />
-      <option name="TEST_OBJECT" value="directory" />
-      <dir value="$PROJECT_DIR$/server/src/test/java" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="java in shared" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="shared" />
       <option name="TEST_OBJECT" value="directory" />
@@ -114,21 +139,13 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="server in server" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="server" />
-      <option name="TEST_OBJECT" value="directory" />
-      <dir value="$PROJECT_DIR$/server/src/test/java/passoff/server" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.Main (1)" />
+        <item itemvalue="Application.Main" />
         <item itemvalue="JUnit.WebSocketTests" />
         <item itemvalue="JUnit.ServerFacadeTests" />
         <item itemvalue="JUnit.java in shared" />
-        <item itemvalue="JUnit.server in server" />
-        <item itemvalue="JUnit.java in server" />
       </list>
     </recent_temporary>
   </component>
@@ -380,7 +397,23 @@
       <option name="project" value="LOCAL" />
       <updated>1754592205381</updated>
     </task>
-    <option name="localTasksCounter" value="31" />
+    <task id="LOCAL-00031" summary="deleted unused NotificationHandler">
+      <option name="closed" value="true" />
+      <created>1754592835012</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1754592835012</updated>
+    </task>
+    <task id="LOCAL-00032" summary="deleted unused Notify from server">
+      <option name="closed" value="true" />
+      <created>1754592990618</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1754592990618</updated>
+    </task>
+    <option name="localTasksCounter" value="33" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -395,8 +428,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="created server messages" />
-    <MESSAGE value="client connection" />
     <MESSAGE value="Websocket connection and handler" />
     <MESSAGE value="updated ClientConnection and ConnectionManager" />
     <MESSAGE value="added notification loadgame errormessage and updated chessgame for gameover status" />
@@ -420,6 +451,8 @@
     <MESSAGE value="updated dependency" />
     <MESSAGE value="deleted extra command" />
     <MESSAGE value="updated styling to fit autograder" />
-    <option name="LAST_COMMIT_MESSAGE" value="updated styling to fit autograder" />
+    <MESSAGE value="deleted unused NotificationHandler" />
+    <MESSAGE value="deleted unused Notify from server" />
+    <option name="LAST_COMMIT_MESSAGE" value="deleted unused Notify from server" />
   </component>
 </project>
