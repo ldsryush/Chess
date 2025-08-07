@@ -1,14 +1,15 @@
 package websocket;
 
+import com.google.gson.Gson;
 import org.eclipse.jetty.websocket.api.Session;
 import websocket.messages.ServerMessage;
 
 import java.io.IOException;
 import java.util.Objects;
 
-import static websocket.GsonFactory.gson;
-
 public class ClientConnection {
+    private static final Gson gson = new Gson();
+
     private final String userName;
     private final Session session;
     private final String authToken;
@@ -59,7 +60,7 @@ public class ClientConnection {
     public void send(ServerMessage message) {
         if (!isOpen()) return;
         String json = gson.toJson(message);
-        System.out.println("Sending to " + userName + ": " + json); // Optional debug log
+        System.out.println("Sending to " + userName + ": " + json);
         send(json);
     }
 

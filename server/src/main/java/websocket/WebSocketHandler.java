@@ -14,12 +14,13 @@ import websocket.commands.UserGameCommand;
 import websocket.commands.UserGameCommand.CommandType;
 import websocket.messages.*;
 
-import static websocket.GsonFactory.gson;
-
+import com.google.gson.Gson;
 import java.io.IOException;
 
 @WebSocket
 public class WebSocketHandler {
+
+    private static final Gson gson = new Gson(); // ✅ Direct Gson instance
 
     private static GameService gameService;
     private static AuthenticationService authService;
@@ -136,7 +137,7 @@ public class WebSocketHandler {
                 case "white", "black" -> user + " connected to the game as " + color;
                 default -> user + " connected as observer";
             };
-            notificationHandler.notifyOthers(conn, new NotificationMessage(roleMsg));
+            notificationHandler.notifyOthers(conn, new NotificationMessage(roleMsg)); // ✅ Broadcast to others
 
         } catch (ResponseException | DataAccessException e) {
             sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
