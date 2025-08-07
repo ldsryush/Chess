@@ -1,11 +1,12 @@
 package websocket;
 
-import com.google.gson.Gson;
 import org.eclipse.jetty.websocket.api.Session;
 import websocket.messages.ServerMessage;
 
 import java.io.IOException;
 import java.util.Objects;
+
+import static websocket.GsonFactory.gson;
 
 public class ClientConnection {
     private final String userName;
@@ -14,13 +15,7 @@ public class ClientConnection {
     private final int gameID;
     private final String playerColor;
 
-    private static final Gson gson = new Gson();
-
-    public ClientConnection(String userName,
-                            Session session,
-                            String authToken,
-                            int gameID,
-                            String playerColor) {
+    public ClientConnection(String userName, Session session, String authToken, int gameID, String playerColor) {
         this.userName = userName;
         this.session = session;
         this.authToken = authToken;
@@ -53,32 +48,24 @@ public class ClientConnection {
     }
 
     public void send(String message) {
-        if (!isOpen()) {
-            System.out.println("ℹ️ Skipping send — session closed for " + userName);
-            return;
-        }
+        if (!isOpen()) return;
         try {
             session.getRemote().sendString(message);
         } catch (IOException e) {
-            System.err.println("❌ Failed to send message to " + userName + ": " + e.getMessage());
+            System.err.println("Failed to send message to " + userName + ": " + e.getMessage());
         }
     }
 
     public void send(ServerMessage message) {
-        if (!isOpen()) {
-            System.out.println("ℹ️ Skipping send — session closed for " + userName);
-            return;
-        }
+        if (!isOpen()) return;
         String json = gson.toJson(message);
-        System.out.println("📨 Sent to " + userName + ": " + json);
         send(json);
     }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (!(obj instanceof ClientConnection)) return false;
-        ClientConnection other = (ClientConnection) obj;
+        if (!(obj instanceof ClientConnection other)) return false;
         return Objects.equals(userName, other.userName);
     }
 
