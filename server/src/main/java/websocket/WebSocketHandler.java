@@ -99,8 +99,7 @@ public class WebSocketHandler {
         try {
             AuthData auth = authService.getAuthData(cmd.getAuthToken());
             if (auth == null) {
-                sendRaw(session,
-                        gson.toJson(new ErrorMessage("Invalid auth token")));
+                sendRaw(session, gson.toJson(new ErrorMessage("Invalid auth token")));
                 return;
             }
 
@@ -108,59 +107,27 @@ public class WebSocketHandler {
             int gameID = cmd.getGameID();
             var data = gameService.getGameData(gameID);
 
-            boolean isWhite = user.equals(data.whiteUsername());
-            boolean isBlack = user.equals(data.blackUsername());
-            boolean joinNew = false;
-            String color;
-
-            if (isWhite) {
-                color = "white";
-            } else if (isBlack) {
-                color = "black";
-            } else if (data.whiteUsername() == null) {
-                color = "white";
-                joinNew = true;
-            } else if (data.blackUsername() == null) {
-                color = "black";
-                joinNew = true;
-            } else {
-                color = "observer";
+            String playerColor = "observer";
+            if (user.equals(data.whiteUsername())) {
+                playerColor = "WHITE";
+            } else if (user.equals(data.blackUsername())) {
+                playerColor = "BLACK";
             }
 
-            if (joinNew && !"observer".equals(color)) {
-                joinService.joinGame(
-                        new JoinGameRequest(color.toUpperCase(), gameID),
-                        auth
-                );
-            }
-
-            ClientConnection conn =
-                    new ClientConnection(user, session, cmd.getAuthToken(),
-                            gameID, color);
-
+            ClientConnection conn = new ClientConnection(user, session, cmd.getAuthToken(), gameID, playerColor);
             connectionManager.addConnection(gameID, conn);
 
             ChessGame game = gameService.getGameData(gameID).game();
-            conn.send(new LoadGameMessage(game, color));
 
-            String roleMsg = switch (color) {
-                case "white", "black" ->
-                        user + " connected to the game as " + color;
-                default ->
-                        user + " connected as observer";
-            };
-            connectionManager.broadcastToOthers(
-                    gameID,
-                    conn,
-                    new NotificationMessage(roleMsg)
-            );
+            connectionManager.broadcastToGame(gameID, new LoadGameMessage(game, playerColor));
+
+            String roleMsg = String.format("%s connected as %s", user, playerColor);
+            connectionManager.broadcastToGame(gameID, new NotificationMessage(roleMsg));
 
         } catch (ResponseException | DataAccessException e) {
-            sendRaw(session,
-                    gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
+            sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));
         } catch (Exception e) {
-            sendRaw(session,
-                    gson.toJson(new ErrorMessage("Unexpected error: " + e.getMessage())));
+            sendRaw(session, gson.toJson(new ErrorMessage("Unexpected error: " + e.getMessage())));
         }
     }
 
