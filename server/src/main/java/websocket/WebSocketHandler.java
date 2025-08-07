@@ -15,26 +15,37 @@ import websocket.commands.UserGameCommand.CommandType;
 import websocket.messages.*;
 
 import com.google.gson.Gson;
+
 import java.io.IOException;
 
 @WebSocket
 public class WebSocketHandler {
 
-    private static final Gson gson = new Gson(); // ✅ Direct Gson instance
+    private static final Gson gson = new Gson();
 
+    // Services and handlers (injected)
     private static GameService gameService;
     private static AuthenticationService authService;
     private static JoinService joinService;
     private static NotificationHandler notificationHandler;
+    private static ConnectionManager connectionManager;
 
-    public static void configure(GameService gs, AuthenticationService as, JoinService js, NotificationHandler nh) {
+    /**
+     * Inject all dependencies, including the shared ConnectionManager.
+     */
+    public static void configure(
+            GameService gs,
+            AuthenticationService as,
+            JoinService js,
+            NotificationHandler nh,
+            ConnectionManager cm
+    ) {
         gameService = gs;
         authService = as;
         joinService = js;
         notificationHandler = nh;
+        connectionManager = cm;
     }
-
-    private final ConnectionManager connectionManager = new ConnectionManager();
 
     @OnWebSocketConnect
     public void onConnect(Session session) {
@@ -137,7 +148,7 @@ public class WebSocketHandler {
                 case "white", "black" -> user + " connected to the game as " + color;
                 default -> user + " connected as observer";
             };
-            notificationHandler.notifyOthers(conn, new NotificationMessage(roleMsg)); // ✅ Broadcast to others
+            notificationHandler.notifyOthers(conn, new NotificationMessage(roleMsg));
 
         } catch (ResponseException | DataAccessException e) {
             sendRaw(session, gson.toJson(new ErrorMessage("Connect failed: " + e.getMessage())));

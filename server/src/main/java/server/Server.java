@@ -1,23 +1,39 @@
 package server;
 
 import com.google.gson.Gson;
-import dataaccess.*;
+import dataaccess.AuthDAO;
+import dataaccess.GameDAO;
+import dataaccess.UserDAO;
+import dataaccess.DataAccessException;
 import dataaccess.mysql.MySQLAuthDAO;
 import dataaccess.mysql.MySQLGameDAO;
 import dataaccess.mysql.MySQLUserDAO;
 import exception.ErrorMessage;
 import exception.ResponseException;
-import model.*;
-import service.*;
+import model.AuthData;
+import model.RegistrationRequest;
+import model.LoginRequest;
+import model.LogoutRequest;
+import model.CreateGameRequest;
+import model.GameID;
+import model.JoinGameRequest;
+import service.RegistrationService;
+import service.LoginService;
+import service.LogoutService;
+import service.ListService;
+import service.JoinService;
+import service.GameService;
+import service.ClearService;
+import service.AuthenticationService;
 import spark.Spark;
-import websocket.WebSocketHandler;
-import websocket.NotificationHandler;
+import spark.Request;
+import spark.Response;
 import websocket.ConnectionManager;
+import websocket.NotificationHandler;
 import websocket.ClientConnection;
+import websocket.WebSocketHandler;
 import websocket.messages.LoadGameMessage;
 import websocket.messages.NotificationMessage;
-
-import java.util.Collection;
 
 public class Server {
 
@@ -32,9 +48,9 @@ public class Server {
 
     public Server() {
         try {
-            AuthDAO authDAO = new MySQLAuthDAO();
-            GameDAO gameDAO = new MySQLGameDAO();
-            UserDAO userDAO = new MySQLUserDAO();
+            AuthDAO authDAO    = new MySQLAuthDAO();
+            GameDAO gameDAO    = new MySQLGameDAO();
+            UserDAO userDAO    = new MySQLUserDAO();
 
             registrationService = new RegistrationService(userDAO, authDAO);
             loginService        = new LoginService(userDAO, authDAO);
@@ -54,8 +70,8 @@ public class Server {
         Spark.port(desiredPort);
         Spark.staticFiles.location("web");
 
-        // Create ConnectionManager and NotificationHandler
         ConnectionManager connectionManager = new ConnectionManager();
+
         NotificationHandler handler = new NotificationHandler() {
             @Override
             public void notify(ClientConnection recipient, NotificationMessage message) {
@@ -88,24 +104,27 @@ public class Server {
             }
         };
 
-        // Inject dependencies into your WebSocket handler
-        WebSocketHandler.configure(gameService, authService, joinService, handler);
+        WebSocketHandler.configure(
+                gameService,
+                authService,
+                joinService,
+                handler,
+                connectionManager
+        );
 
-        // Register WebSocket endpoint
         Spark.webSocket("/ws", WebSocketHandler.class);
 
-        // HTTP routes
-        Spark.post("/user",                  this::registrationHandler);
-        Spark.post("/session",               this::loginUser);
-        Spark.delete("/session",             this::logoutUser);
-        Spark.get("/game",                   this::getGames);
-        Spark.post("/game",                  this::createGame);
-        Spark.put("/game",                   this::joinGame);
-        Spark.put("/game/observe/:gameID",   this::observeGame);
-        Spark.delete("/db",                  this::clearApp);
+        Spark.post("/user",                 this::registrationHandler);
+        Spark.post("/session",              this::loginUser);
+        Spark.delete("/session",            this::logoutUser);
+        Spark.get("/game",                  this::getGames);
+        Spark.post("/game",                 this::createGame);
+        Spark.put("/game",                  this::joinGame);
+        Spark.put("/game/observe/:gameID",  this::observeGame);
+        Spark.delete("/db",                 this::clearApp);
 
-        Spark.exception(ResponseException.class, this::responseExceptionHandler);
-        Spark.exception(DataAccessException.class,  this::dataExceptionHandler);
+        Spark.exception(ResponseException.class,   this::responseExceptionHandler);
+        Spark.exception(DataAccessException.class, this::dataExceptionHandler);
 
         Spark.init();
         Spark.awaitInitialization();
@@ -120,26 +139,26 @@ public class Server {
         Spark.stop();
     }
 
-    private void responseExceptionHandler(ResponseException e, spark.Request request, spark.Response response) {
+    private void responseExceptionHandler(ResponseException e, Request request, Response response) {
         response.status(e.getStatusCode());
         String msg = "Error: " + e.getMessage();
         response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
 
-    private void dataExceptionHandler(DataAccessException e, spark.Request request, spark.Response response) {
+    private void dataExceptionHandler(DataAccessException e, Request request, Response response) {
         response.status(500);
         String msg = "Error: " + e.getMessage();
         response.body(new Gson().toJson(new ErrorMessage(msg)));
     }
 
-    private Object registrationHandler(spark.Request request, spark.Response response)
+    private Object registrationHandler(Request request, Response response)
             throws ResponseException, DataAccessException {
         response.type("application/json");
-        var user = new Gson().fromJson(request.body(), RegistrationRequest.class);
+        RegistrationRequest user = new Gson().fromJson(request.body(), RegistrationRequest.class);
 
-        if (user.username() == null || user.username().isBlank() ||
-                user.password() == null || user.password().isBlank() ||
-                user.email()    == null || user.email().isBlank()) {
+        if (user.username() == null || user.username().isBlank()
+                || user.password() == null || user.password().isBlank()
+                || user.email() == null || user.email().isBlank()) {
             throw new ResponseException(400, "Missing required fields");
         }
 
@@ -148,69 +167,74 @@ public class Server {
         return new Gson().toJson(authData);
     }
 
-    private Object loginUser(spark.Request request, spark.Response response)
+    private Object loginUser(Request request, Response response)
             throws ResponseException, DataAccessException {
         response.type("application/json");
-        var user = new Gson().fromJson(request.body(), LoginRequest.class);
+        LoginRequest user = new Gson().fromJson(request.body(), LoginRequest.class);
         AuthData authData = loginService.login(user);
         response.status(200);
         return new Gson().toJson(authData);
     }
 
-    private Object logoutUser(spark.Request request, spark.Response response)
+    private Object logoutUser(Request request, Response response)
             throws ResponseException, DataAccessException {
         response.type("application/json");
-        var authToken = new LogoutRequest(request.headers("authorization"));
+        LogoutRequest authToken = new LogoutRequest(request.headers("authorization"));
         authService.authenticate(authToken.authToken());
         logoutService.logoutUser(authToken);
         response.status(200);
         return "{}";
     }
 
-    private Object getGames(spark.Request request, spark.Response response)
+    private Object getGames(Request request, Response response)
             throws ResponseException, DataAccessException {
-        var authToken = request.headers("authorization");
+        response.type("application/json");
+        String authToken = request.headers("authorization");
         authService.authenticate(authToken);
-        Collection<GameResponseData> allGames = listService.getGames();
+        var games = listService.getGames();
         response.status(200);
-        return new Gson().toJson(new ListGamesResponse(allGames));
+        return new Gson().toJson(games);
     }
 
-    private Object joinGame(spark.Request request, spark.Response response)
+    private Object createGame(Request request, Response response)
             throws ResponseException, DataAccessException {
-        var authToken = request.headers("authorization");
+        response.type("application/json");
+        String authToken = request.headers("authorization");
         authService.authenticate(authToken);
-        AuthData authData = authService.getAuthData(authToken);
-        var joinInfo = new Gson().fromJson(request.body(), JoinGameRequest.class);
-        joinService.joinGame(joinInfo, authData);
-        response.status(200);
-        return "{}";
-    }
-
-    private Object createGame(spark.Request request, spark.Response response)
-            throws ResponseException, DataAccessException {
-        var authToken = request.headers("authorization");
-        authService.authenticate(authToken);
-        var newGame = new Gson().fromJson(request.body(), CreateGameRequest.class);
+        CreateGameRequest newGame = new Gson().fromJson(request.body(), CreateGameRequest.class);
         GameID gameID = gameService.createGame(newGame);
         response.status(200);
         return new Gson().toJson(gameID);
     }
 
-    private Object clearApp(spark.Request request, spark.Response response)
+    private Object joinGame(Request request, Response response)
             throws ResponseException, DataAccessException {
-        clearService.clearDatabase();
+        response.type("application/json");
+        String authToken = request.headers("authorization");
+        authService.authenticate(authToken);
+        AuthData authData = authService.getAuthData(authToken);
+        JoinGameRequest joinInfo = new Gson().fromJson(request.body(), JoinGameRequest.class);
+        joinService.joinGame(joinInfo, authData);
         response.status(200);
         return "{}";
     }
 
-    private Object observeGame(spark.Request request, spark.Response response)
+    private Object observeGame(Request request, Response response)
             throws ResponseException, DataAccessException {
-        var authToken = request.headers("authorization");
+        response.type("application/json");
+        String authToken = request.headers("authorization");
         authService.authenticate(authToken);
         AuthData authData = authService.getAuthData(authToken);
         int gameID = Integer.parseInt(request.params(":gameID"));
         joinService.observeGame(gameID, authData);
+        response.status(200);
+        return "{}";
+    }
+
+    private Object clearApp(Request request, Response response)
+            throws ResponseException, DataAccessException {
+        response.type("application/json");
+        clearService.clearDatabase();
         response.status(200);
         return "{}";
     }
