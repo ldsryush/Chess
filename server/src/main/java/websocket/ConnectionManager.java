@@ -1,6 +1,6 @@
 package websocket;
 
-import org.eclipse.jetty.websocket.api.Session;
+import javax.websocket.Session;
 import websocket.messages.ServerMessage;
 
 import java.util.*;
