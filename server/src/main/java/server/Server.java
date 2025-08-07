@@ -10,13 +10,7 @@ import dataaccess.mysql.MySQLGameDAO;
 import dataaccess.mysql.MySQLUserDAO;
 import exception.ErrorMessage;
 import exception.ResponseException;
-import model.AuthData;
-import model.RegistrationRequest;
-import model.LoginRequest;
-import model.LogoutRequest;
-import model.CreateGameRequest;
-import model.GameID;
-import model.JoinGameRequest;
+import model.*;
 import service.RegistrationService;
 import service.LoginService;
 import service.LogoutService;
@@ -193,8 +187,7 @@ public class Server {
         authService.authenticate(authToken);
         var games = listService.getGames();
         response.status(200);
-        return new Gson().toJson(games);
-    }
+        return new Gson().toJson(new ListGamesResponse(games));    }
 
     private Object createGame(Request request, Response response)
             throws ResponseException, DataAccessException {
