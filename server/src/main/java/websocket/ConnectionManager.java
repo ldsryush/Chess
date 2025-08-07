@@ -21,7 +21,7 @@ public class ConnectionManager {
                 .computeIfAbsent(gameID, k -> new ArrayList<>())
                 .add(connection);
 
-        System.out.println("📌 Added connection for " + connection.getUserName()
+        System.out.println("Added connection for " + connection.getUserName()
                 + " (" + connection.getPlayerColor() + ") to game " + gameID);
     }
 
@@ -44,9 +44,14 @@ public class ConnectionManager {
         if (conn == null) return;
 
         tokenToConnection.remove(conn.getAuthToken());
-        gameToConnections.values().forEach(list -> list.remove(conn));
 
-        System.out.println("❌ Removed connection for " + conn.getUserName());
+        int gameID = conn.getGameID();
+        List<ClientConnection> connections = gameToConnections.get(gameID);
+        if (connections != null) {
+            connections.remove(conn);
+        }
+
+        System.out.println("Removed connection for " + conn.getUserName());
     }
 
     public void broadcastToGame(int gameID, ServerMessage message) {
