@@ -37,7 +37,6 @@ public class WebSocketFacade {
     @OnOpen
     public void onOpen(Session session) {
         this.session = session;
-        System.out.println("WebSocket connection opened");
     }
 
     @OnMessage
@@ -73,12 +72,12 @@ public class WebSocketFacade {
 
     @OnClose
     public void onClose(Session session, CloseReason reason) {
-        System.out.println("WebSocket closed: " + reason);
+        // Connection closed
     }
 
     @OnError
     public void onError(Session session, Throwable throwable) {
-        System.out.println("WebSocket error: " + throwable.getMessage());
+        // Connection error occurred
     }
 
     public void connect(String authToken, int gameID) throws IOException {

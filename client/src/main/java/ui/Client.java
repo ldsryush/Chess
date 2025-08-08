@@ -109,12 +109,7 @@ public class Client {
         try {
             GameID id = server.createGame(new GameName(name));
             updateGames();
-            for (int i = 0; i < allGames.size(); i++) {
-                if (Objects.equals(allGames.get(i).gameID(), id.gameID())) {
-                    return "Game " + name + " created with ID " + (i + 1);
-                }
-            }
-            return "Error creating game, please try again";
+            return "Game " + name + " created with ID " + id.gameID() + ". Use 'join " + id.gameID() + " WHITE' to join.";
         } catch (ResponseException e) {
             return "Couldn't create game: " + e.getMessage();
         }
@@ -136,19 +131,31 @@ public class Client {
             return "Usage: join <ID> [WHITE|BLACK]";
         }
 
-        int idx;
+        int gameID;
         try {
-            idx = Integer.parseInt(params[0]);
+            gameID = Integer.parseInt(params[0]);
         } catch (NumberFormatException e) {
-            return "Invalid game index. Use: join 1 WHITE";
+            return "Invalid game ID. Use: join <gameID> WHITE";
         }
 
         try {
             updateGames();
-            GameResponseData game = allGames.get(idx - 1);
+            // Find game by actual game ID, not list index
+            GameResponseData game = null;
+            for (GameResponseData g : allGames) {
+                if (g.gameID() == gameID) {
+                    game = g;
+                    break;
+                }
+            }
+
+            if (game == null) {
+                return "Game with ID " + gameID + " not found";
+            }
+
             return joinGameWithColor(params[1], game);
-        } catch (IndexOutOfBoundsException e) {
-            return "Requested game doesn't exist";
+        } catch (Exception e) {
+            return "Error joining game: " + e.getMessage();
         }
     }
 
@@ -197,16 +204,28 @@ public class Client {
             return "Usage: observe <ID>";
         }
 
-        int idx;
+        int gameID;
         try {
-            idx = Integer.parseInt(params[0]);
+            gameID = Integer.parseInt(params[0]);
         } catch (NumberFormatException e) {
-            return "Invalid game index. Use: observe 1";
+            return "Invalid game ID. Use: observe <gameID>";
         }
 
         try {
             updateGames();
-            GameResponseData game = allGames.get(idx - 1);
+            // Find game by actual game ID, not list index
+            GameResponseData game = null;
+            for (GameResponseData g : allGames) {
+                if (g.gameID() == gameID) {
+                    game = g;
+                    break;
+                }
+            }
+
+            if (game == null) {
+                return "Game with ID " + gameID + " not found";
+            }
+
             server.observeGame(game.gameID());
 
             playerColor = "WHITE"; // observers default to white view
@@ -226,8 +245,6 @@ public class Client {
 
             return "";
 
-        } catch (IndexOutOfBoundsException e) {
-            return "Requested game doesn't exist";
         } catch (ResponseException e) {
             return "Observe failed: " + e.getMessage();
         } catch (Exception e) {
@@ -292,13 +309,12 @@ public class Client {
     private String buildGameList() {
         StringBuilder sb = new StringBuilder();
         sb.append(LINE)
-                .append(String.format("| ID  | %-14s| %-14s| %-12s|\n",
-                        "White Player", "Black Player", "Game Name"))
+                .append(String.format("| %-8s| %-14s| %-14s| %-12s|\n",
+                        "Game ID", "White Player", "Black Player", "Game Name"))
                 .append(LINE);
-        for (int i = 0; i < allGames.size(); i++) {
-            GameResponseData g = allGames.get(i);
-            sb.append(String.format("| %-4d| %-14s| %-14s| %-12s|\n",
-                            i + 1,
+        for (GameResponseData g : allGames) {
+            sb.append(String.format("| %-8d| %-14s| %-14s| %-12s|\n",
+                            g.gameID(),
                             g.whiteUsername() != null ? g.whiteUsername() : "-",
                             g.blackUsername() != null ? g.blackUsername() : "-",
                             g.gameName()))

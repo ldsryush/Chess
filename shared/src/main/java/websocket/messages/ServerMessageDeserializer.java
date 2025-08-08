@@ -22,8 +22,6 @@ public class ServerMessageDeserializer implements JsonDeserializer<ServerMessage
             throw new JsonParseException("Unknown serverMessageType: " + typeStr);
         }
 
-        System.out.println("Deserializing ServerMessage of type: " + type);
-
         switch (type) {
             case LOAD_GAME:
                 return context.deserialize(json, LoadGameMessage.class);

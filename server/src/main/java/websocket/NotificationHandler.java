@@ -17,4 +17,5 @@ public interface NotificationHandler {
 
     // Broadcast to all in the game
     void notifyGame(int gameID, NotificationMessage message);
+    void notifyGame(int gameID, LoadGameMessage message);
 }

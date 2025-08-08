@@ -44,13 +44,10 @@ public class WebSocketHandler {
         joinService = js;
         notificationHandler = nh;
         connectionManager = cm;
-
-        System.out.println("WebSocketHandler configured with all dependencies");
     }
 
     @OnWebSocketConnect
     public void onConnect(Session session) {
-        System.out.println("Client connected: " + session.getRemoteAddress());
         if (gameService == null) {
             System.err.println("ERROR: WebSocketHandler not configured! Call configure() first.");
         }
@@ -58,7 +55,6 @@ public class WebSocketHandler {
 
     @OnWebSocketMessage
     public void onMessage(Session session, String message) {
-        System.out.println("Received: " + message);
 
         if (gameService == null || authService == null || connectionManager == null) {
             System.err.println("ERROR: WebSocketHandler not properly configured");
@@ -109,7 +105,6 @@ public class WebSocketHandler {
 
     @OnWebSocketClose
     public void onClose(Session session, int status, String reason) {
-        System.out.println("Client disconnected: " + session.getRemoteAddress() + " Reason: " + reason);
         if (connectionManager != null) {
             ClientConnection conn = connectionManager.getConnection(session);
             if (conn != null) {
@@ -152,10 +147,19 @@ public class WebSocketHandler {
             boolean joinNew = false;
             String color;
 
+            // Check if client specified a desired color
+            String desiredColor = cmd.getDesiredColor();
+
             if (isWhite) {
                 color = "white";
             } else if (isBlack) {
                 color = "black";
+            } else if (desiredColor != null && "white".equalsIgnoreCase(desiredColor) && data.whiteUsername() == null) {
+                color = "white";
+                joinNew = true;
+            } else if (desiredColor != null && "black".equalsIgnoreCase(desiredColor) && data.blackUsername() == null) {
+                color = "black";
+                joinNew = true;
             } else if (data.whiteUsername() == null) {
                 color = "white";
                 joinNew = true;
@@ -196,63 +200,91 @@ public class WebSocketHandler {
         int gameID = conn.getGameID();
         String user = conn.getUserName();
 
-        try {
-            if (cmd.getMove() == null) {
-                notificationHandler.error(conn, new ErrorMessage("Move cannot be null"));
-                return;
+        // Synchronize on gameID to prevent race conditions with concurrent moves
+        synchronized (("game_" + gameID).intern()) {
+            try {
+                if (cmd.getMove() == null) {
+                    notificationHandler.error(conn, new ErrorMessage("Move cannot be null"));
+                    return;
+                }
+
+                AuthData auth = authService.getAuthData(cmd.getAuthToken());
+                if (auth == null || !auth.username().equals(user)) {
+                    notificationHandler.error(conn, new ErrorMessage("Invalid auth token"));
+                    return;
+                }
+
+                // Get fresh game data to ensure we have the latest state
+                var data = gameService.getGameData(gameID);
+                ChessGame game = data.game();
+
+                // Check if game is over
+                if (game.isGameOver()) {
+                    notificationHandler.error(conn, new ErrorMessage("Game is already over"));
+                    return;
+                }
+
+                // Validate turn - must be the correct player's turn
+                // Special case: if there's no player assigned to the current turn color, allow the current player to play both sides
+                String whitePlayer = data.whiteUsername();
+                String blackPlayer = data.blackUsername();
+
+                boolean isCurrentTurnPlayer = false;
+                if (game.getTeamTurn() == ChessGame.TeamColor.WHITE) {
+                    isCurrentTurnPlayer = user.equals(whitePlayer) || (whitePlayer == null && user.equals(blackPlayer));
+                } else { // BLACK's turn
+                    isCurrentTurnPlayer = user.equals(blackPlayer) || (blackPlayer == null && user.equals(whitePlayer));
+                }
+
+                if (!isCurrentTurnPlayer) {
+                    notificationHandler.error(conn, new ErrorMessage("Invalid move: not your turn"));
+                    return;
+                }
+
+                // Make the move
+                gameService.makeMove(gameID, user, cmd.getMove());
+
+                // Get updated game state
+                ChessGame updated = gameService.getGameData(gameID).game();
+
+                // Send updates to ALL players in the game (including the one who made the move)
+                notificationHandler.notifyGame(gameID, new LoadGameMessage(updated, null));
+
+                // Send move notification
+                var mv = cmd.getMove();
+                var piece = updated.getBoard().getPiece(mv.getEndPosition());
+                String text = String.format("%s moved %s from %s to %s",
+                        user,
+                        piece != null ? piece.getPieceType() : "a piece",
+                        positionToString(mv.getStartPosition()),
+                        positionToString(mv.getEndPosition()));
+                notificationHandler.notifyOthers(conn, new NotificationMessage(text));
+
+                // Check for game end conditions
+                if (updated.isInCheckmate(ChessGame.TeamColor.WHITE)) {
+                    String winner = data.blackUsername() != null ? data.blackUsername() : "BLACK";
+                    String loser = data.whiteUsername() != null ? data.whiteUsername() : "WHITE";
+                    notificationHandler.notifyGame(gameID, new NotificationMessage(loser + " is in checkmate! " + winner + " wins!"));
+                } else if (updated.isInCheckmate(ChessGame.TeamColor.BLACK)) {
+                    String winner = data.whiteUsername() != null ? data.whiteUsername() : "WHITE";
+                    String loser = data.blackUsername() != null ? data.blackUsername() : "BLACK";
+                    notificationHandler.notifyGame(gameID, new NotificationMessage(loser + " is in checkmate! " + winner + " wins!"));
+                } else if (updated.isInCheck(ChessGame.TeamColor.WHITE)) {
+                    String checkedPlayer = data.whiteUsername() != null ? data.whiteUsername() : "WHITE";
+                    notificationHandler.notifyGame(gameID, new NotificationMessage(checkedPlayer + " is in check!"));
+                } else if (updated.isInCheck(ChessGame.TeamColor.BLACK)) {
+                    String checkedPlayer = data.blackUsername() != null ? data.blackUsername() : "BLACK";
+                    notificationHandler.notifyGame(gameID, new NotificationMessage(checkedPlayer + " is in check!"));
+                }
+
+            } catch (ResponseException | DataAccessException e) {
+                System.err.println("Move failed: " + e.getMessage());
+                notificationHandler.error(conn, new ErrorMessage("Move failed: " + e.getMessage()));
+            } catch (Exception e) {
+                System.err.println("Unexpected move error: " + e.getMessage());
+                e.printStackTrace();
+                notificationHandler.error(conn, new ErrorMessage("Unexpected error: " + e.getMessage()));
             }
-
-            AuthData auth = authService.getAuthData(cmd.getAuthToken());
-            if (auth == null || !auth.username().equals(user)) {
-                notificationHandler.error(conn, new ErrorMessage("Invalid auth token"));
-                return;
-            }
-
-            var data = gameService.getGameData(gameID);
-            ChessGame game = data.game();
-
-            boolean validTurn = (game.getTeamTurn() == ChessGame.TeamColor.WHITE && user.equals(data.whiteUsername()))
-                    || (game.getTeamTurn() == ChessGame.TeamColor.BLACK && user.equals(data.blackUsername()));
-
-            if (!validTurn) {
-                notificationHandler.error(conn, new ErrorMessage("Invalid move: not your turn"));
-                return;
-            }
-
-            gameService.makeMove(gameID, user, cmd.getMove());
-            ChessGame updated = gameService.getGameData(gameID).game();
-
-            notificationHandler.updateGame(conn, new LoadGameMessage(updated, conn.getPlayerColor()));
-            notificationHandler.notifyOthers(conn, new LoadGameMessage(updated, conn.getPlayerColor()));
-
-            var mv = cmd.getMove();
-            var piece = updated.getBoard().getPiece(mv.getEndPosition());
-            String text = String.format("%s moved %s from %s to %s",
-                    user,
-                    piece != null ? piece.getPieceType() : "a piece",
-                    mv.getStartPosition(),
-                    mv.getEndPosition());
-            notificationHandler.notifyOthers(conn, new NotificationMessage(text));
-
-            if (updated.isGameOver()) {
-                String loser = updated.getTeamTurn() == ChessGame.TeamColor.WHITE
-                        ? data.whiteUsername()
-                        : data.blackUsername();
-                notificationHandler.notifyGame(gameID, new NotificationMessage(loser + " is in checkmate"));
-            } else if (updated.isInCheck(updated.getTeamTurn())) {
-                String checkedPlayer = updated.getTeamTurn() == ChessGame.TeamColor.WHITE
-                        ? data.whiteUsername()
-                        : data.blackUsername();
-                notificationHandler.notifyGame(gameID, new NotificationMessage(checkedPlayer + " is in check"));
-            }
-
-        } catch (ResponseException | DataAccessException e) {
-            System.err.println("Move failed: " + e.getMessage());
-            notificationHandler.error(conn, new ErrorMessage("Move failed: " + e.getMessage()));
-        } catch (Exception e) {
-            System.err.println("Unexpected move error: " + e.getMessage());
-            e.printStackTrace();
-            notificationHandler.error(conn, new ErrorMessage("Unexpected error: " + e.getMessage()));
         }
     }
 
@@ -317,6 +349,15 @@ public class WebSocketHandler {
         }
     }
 
+    private String positionToString(chess.ChessPosition pos) {
+        if (pos == null) {
+            return "";
+        }
+        char file = (char) ('a' + pos.getColumn() - 1);
+        char rank = (char) ('1' + pos.getRow() - 1);
+        return "" + file + rank;
+    }
+
     private void sendRaw(Session session, String json) {
         if (session == null || !session.isOpen()) {
             System.err.println("Cannot send message: session is null or closed");
@@ -333,5 +374,3 @@ public class WebSocketHandler {
         }
     }
 }
-
-

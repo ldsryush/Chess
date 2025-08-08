@@ -74,7 +74,7 @@ public class Server {
 
             @Override
             public void updateGame(ClientConnection recipient, LoadGameMessage message) {
-                recipient.send(message); // ✅ This is the missing method
+                recipient.send(message);
             }
 
             @Override
@@ -94,6 +94,11 @@ public class Server {
 
             @Override
             public void notifyGame(int gameID, NotificationMessage message) {
+                connectionManager.broadcastToGame(gameID, message);
+            }
+
+            @Override
+            public void notifyGame(int gameID, LoadGameMessage message) {
                 connectionManager.broadcastToGame(gameID, message);
             }
         };

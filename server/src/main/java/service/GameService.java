@@ -50,24 +50,32 @@ public class GameService {
     }
 
     public void makeMove(int gameID, String username, chess.ChessMove move) throws ResponseException, DataAccessException {
-        GameData gameData = getGameData(gameID);
-        ChessGame game = gameData.game();
+        // Synchronize on gameID to prevent concurrent modifications to the same game
+        synchronized (("game_move_" + gameID).intern()) {
+            GameData gameData = getGameData(gameID);
+            ChessGame game = gameData.game();
 
-        try {
-            game.makeMove(move);
-        } catch (Exception e) {
-            throw new ResponseException(400, "Invalid move: " + e.getMessage());
+            // Additional validation - ensure the game isn't over
+            if (game.isGameOver()) {
+                throw new ResponseException(400, "Cannot move: game is already over");
+            }
+
+            try {
+                game.makeMove(move);
+            } catch (Exception e) {
+                throw new ResponseException(400, "Invalid move: " + e.getMessage());
+            }
+
+            GameData updatedGame = new GameData(
+                    gameData.gameID(),
+                    gameData.whiteUsername(),
+                    gameData.blackUsername(),
+                    gameData.gameName(),
+                    game
+            );
+
+            gameDAO.updateGame(updatedGame);
         }
-
-        GameData updatedGame = new GameData(
-                gameData.gameID(),
-                gameData.whiteUsername(),
-                gameData.blackUsername(),
-                gameData.gameName(),
-                game
-        );
-
-        gameDAO.updateGame(updatedGame);
     }
 
     public void resignPlayer(int gameID, String username) throws ResponseException, DataAccessException {

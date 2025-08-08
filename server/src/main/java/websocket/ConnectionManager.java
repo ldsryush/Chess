@@ -68,4 +68,8 @@ public class ConnectionManager {
             }
         }
     }
+
+    public List<ClientConnection> getGameConnections(int gameID) {
+        return gameToConnections.get(gameID);
+    }
 }

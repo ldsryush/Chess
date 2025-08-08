@@ -32,7 +32,13 @@ public class GameplayUI implements ClientNotificationHandler {
                     + "/ws";
             //pass gameplay.ui into websocketfacade
             this.webSocketFacade = new WebSocketFacade(wsUrl, this);
-            webSocketFacade.connect(authToken, gameID);
+
+            // Connect with the player's color if they're a player, otherwise as observer
+            if (!"observer".equals(playerColor)) {
+                webSocketFacade.connect(authToken, gameID, playerColor);
+            } else {
+                webSocketFacade.connect(authToken, gameID);
+            }
 
             // Command loop
             while (true) {
@@ -54,31 +60,21 @@ public class GameplayUI implements ClientNotificationHandler {
 
     @Override
     public void updateGame(ChessGame game) {
-        System.out.println("\n🔥 UPDATEGAME CALLED!");
-        System.out.println("🔥 Thread: " + Thread.currentThread().getName());
-
         if (game == null) {
             System.err.println("❌ Received null game!");
             return;
         }
 
         this.currentGame = game;
-        System.out.println("✅ Game updated - Turn: " + game.getTeamTurn());
-        System.out.println("🎯 Player color: " + playerColor);
 
         try {
             System.out.print("\033[2J\033[H");
             System.out.print(ERASE_SCREEN);
             System.out.flush();
 
-            System.out.println("============================================================");
-            System.out.println("🎮 CHESS BOARD UPDATED - MOVE MADE!");
-            System.out.println("============================================================");
-
             drawBoard();
             displayGameStatus();
 
-            System.out.println("============================================================");
             System.out.print(SET_TEXT_COLOR_GREEN + "\n[GAMEPLAY] >>> " + SET_TEXT_COLOR_BLACK);
             System.out.flush();
         } catch (Exception e) {
@@ -120,12 +116,33 @@ public class GameplayUI implements ClientNotificationHandler {
                 displayLegalMoves(pos);
             }
             case "resign" -> {
-                System.out.println("You resigned.");
-                // TODO: webSocketFacade.sendResign();
+                if (!"observer".equals(playerColor)) {
+                    System.out.print("Are you sure you want to resign? (yes/no): ");
+                    String confirmation = scanner.nextLine().trim().toLowerCase();
+                    if ("yes".equals(confirmation) || "y".equals(confirmation)) {
+                        System.out.println("You resigned.");
+                        try {
+                            webSocketFacade.resign(authToken, gameID);
+                        } catch (Exception e) {
+                            System.err.println("❌ Failed to resign: " + e.getMessage());
+                        }
+                    } else {
+                        System.out.println("Resign cancelled.");
+                    }
+                } else {
+                    System.out.println("Observers cannot resign.");
+                }
             }
             case "leave" -> {
-                System.out.println("You left the game.");
-                // TODO: webSocketFacade.sendLeave();
+                System.out.println("Leaving the game...");
+                try {
+                    webSocketFacade.leave(authToken, gameID);
+                    webSocketFacade.close();
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to leave: " + e.getMessage());
+                }
+                // Exit the gameplay loop to return to Post-Login UI
+                return;
             }
             case "move" -> {
                 if (tokens.length < 3) {
@@ -151,7 +168,11 @@ public class GameplayUI implements ClientNotificationHandler {
                 ChessMove move = new ChessMove(from, to, promotion);
                 System.out.println("Submitting move: " +
                         positionToString(from) + " → " + positionToString(to));
-                // TODO: webSocketFacade.sendMove(move);
+                try {
+                    webSocketFacade.makeMove(authToken, gameID, move);
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to send move: " + e.getMessage());
+                }
             }
             default -> System.out.println("Unknown command. Type 'help' for options.");
         }
@@ -189,8 +210,6 @@ public class GameplayUI implements ClientNotificationHandler {
         }
         ChessBoard board = currentGame.getBoard();
         boolean whiteOnBottom = !"black".equalsIgnoreCase(playerColor);
-        System.out.println("🔍 Drawing board - White on bottom: " + whiteOnBottom +
-                " (player: " + playerColor + ")");
         drawChessBoard(board, whiteOnBottom, null);
     }
 

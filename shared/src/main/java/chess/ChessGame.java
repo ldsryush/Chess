@@ -12,10 +12,13 @@ public class ChessGame {
     private TeamColor winner = null;
 
     public ChessGame() {
-        this.turn = TeamColor.WHITE;
+        this.turn = TeamColor.WHITE;  // Always start with WHITE's turn
         this.board = new ChessBoard();
         this.board.resetBoard();
         this.lastMove = null;
+        this.hasMoved = new HashSet<>();  // Initialize hasMoved set
+        this.gameOver = false;  // Ensure game starts as active
+        this.winner = null;     // No winner at start
     }
 
     @Override
