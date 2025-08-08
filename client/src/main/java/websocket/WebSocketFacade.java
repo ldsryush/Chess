@@ -10,17 +10,20 @@ import websocket.messages.LoadGameMessage;
 import websocket.messages.NotificationMessage;
 import websocket.messages.ServerMessage;
 import websocket.messages.ServerMessageDeserializer;
+
 import javax.websocket.*;
 import java.io.IOException;
 import java.net.URI;
 
 @ClientEndpoint
-public class WebSocketFacade extends Endpoint {
+public class WebSocketFacade {
 
     private Session session;
     private final ClientNotificationHandler notificationHandler;
+
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(ServerMessage.class, new ServerMessageDeserializer())
+            .setPrettyPrinting()
             .create();
 
     public WebSocketFacade(String url, ClientNotificationHandler notificationHandler) throws Exception {
@@ -28,17 +31,56 @@ public class WebSocketFacade extends Endpoint {
 
         URI socketURI = new URI(url);
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-        this.session = container.connectToServer(this, socketURI);
-
-        this.session.addMessageHandler((MessageHandler.Whole<String>) this::handleServerMessage);
+        container.connectToServer(this, socketURI);
     }
 
-    @Override
-    public void onOpen(Session session, EndpointConfig endpointConfig) {
+    @OnOpen
+    public void onOpen(Session session) {
+        this.session = session;
         System.out.println("WebSocket connection opened");
     }
 
-    // Existing commands
+    @OnMessage
+    public void onMessage(String message) {
+        try {
+            ServerMessage serverMessage = GSON.fromJson(message, ServerMessage.class);
+
+            switch (serverMessage.getServerMessageType()) {
+                case LOAD_GAME -> {
+                    LoadGameMessage loadGame = GSON.fromJson(message, LoadGameMessage.class);
+                    if (loadGame.getPlayerColor() != null) {
+                        notificationHandler.setPlayerColor(loadGame.getPlayerColor());
+                    }
+                    if (loadGame.getGame() != null) {
+                        notificationHandler.updateGame(loadGame.getGame());
+                    } else {
+                        notificationHandler.displayError("Received empty game data");
+                    }
+                }
+                case NOTIFICATION -> {
+                    NotificationMessage notification = GSON.fromJson(message, NotificationMessage.class);
+                    notificationHandler.notify(notification.getMessage());
+                }
+                case ERROR -> {
+                    ErrorMessage error = GSON.fromJson(message, ErrorMessage.class);
+                    notificationHandler.displayError(error.getErrorMessage());
+                }
+            }
+        } catch (Exception e) {
+            notificationHandler.displayError("Error processing server message: " + e.getMessage());
+        }
+    }
+
+    @OnClose
+    public void onClose(Session session, CloseReason reason) {
+        System.out.println("WebSocket closed: " + reason);
+    }
+
+    @OnError
+    public void onError(Session session, Throwable throwable) {
+        System.out.println("WebSocket error: " + throwable.getMessage());
+    }
+
     public void connect(String authToken, int gameID) throws IOException {
         sendCommand(new UserGameCommand(UserGameCommand.CommandType.CONNECT, authToken, gameID));
     }
@@ -75,30 +117,6 @@ public class WebSocketFacade extends Endpoint {
         if (session != null && session.isOpen()) {
             String json = GSON.toJson(command);
             session.getBasicRemote().sendText(json);
-        }
-    }
-
-    private void handleServerMessage(String message) {
-        try {
-            ServerMessage serverMessage = GSON.fromJson(message, ServerMessage.class);
-
-            switch (serverMessage.getServerMessageType()) {
-                case LOAD_GAME -> {
-                    LoadGameMessage loadGame = GSON.fromJson(message, LoadGameMessage.class);
-                    System.out.println("Received LOAD_GAME message"); // Add this
-                    notificationHandler.updateGame(loadGame.getGame());
-                }
-                case NOTIFICATION -> {
-                    NotificationMessage notification = GSON.fromJson(message, NotificationMessage.class);
-                    notificationHandler.notify(notification.getMessage());
-                }
-                case ERROR -> {
-                    ErrorMessage error = GSON.fromJson(message, ErrorMessage.class);
-                    notificationHandler.displayError(error.getErrorMessage());
-                }
-            }
-        } catch (Exception e) {
-            notificationHandler.displayError("Error processing server message: " + e.getMessage());
         }
     }
 

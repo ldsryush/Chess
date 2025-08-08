@@ -6,7 +6,7 @@ public class ChessGame {
     private TeamColor turn;
     private ChessBoard board;
     private ChessMove lastMove;
-    private final Set<ChessPosition> hasMoved = new HashSet<>();
+    private Set<ChessPosition> hasMoved = new HashSet<>();  // Removed 'final' keyword
 
     private boolean gameOver = false;
     private TeamColor winner = null;
@@ -48,6 +48,19 @@ public class ChessGame {
 
     public ChessMove getLastMove() {
         return lastMove;
+    }
+
+    public void setLastMove(ChessMove lastMove) {
+        this.lastMove = lastMove;
+    }
+
+    // Add getter and setter for hasMoved to make it JSON-friendly
+    public Set<ChessPosition> getHasMoved() {
+        return new HashSet<>(hasMoved);
+    }
+
+    public void setHasMoved(Set<ChessPosition> hasMoved) {
+        this.hasMoved = hasMoved != null ? new HashSet<>(hasMoved) : new HashSet<>();
     }
 
     public boolean isGameOver() {

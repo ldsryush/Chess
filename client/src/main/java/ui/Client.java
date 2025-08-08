@@ -4,10 +4,11 @@ import exception.ResponseException;
 import model.*;
 import model.ServerFacade;
 import model.JoinGameRequest;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
+
+import com.google.gson.JsonObject;
 
 import static ui.EscapeSequences.*;
 
@@ -100,6 +101,33 @@ public class Client {
         }
     }
 
+    private String createGame(String[] params) {
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
+        String name = String.join(" ", params);
+        try {
+            GameID id = server.createGame(new GameName(name));
+            updateGames();
+            for (int i = 0; i < allGames.size(); i++) {
+                if (Objects.equals(allGames.get(i).gameID(), id.gameID())) {
+                    return "Game " + name + " created with ID " + (i + 1);
+                }
+            }
+            return "Error creating game, please try again";
+        } catch (ResponseException e) {
+            return "Couldn't create game: " + e.getMessage();
+        }
+    }
+
+    private String listGames() {
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
+        }
+        updateGames();
+        return buildGameList();
+    }
+
     private String joinGame(String[] params) {
         if (state == State.LOGGED_OUT) {
             return "Must login first";
@@ -127,15 +155,11 @@ public class Client {
     private String joinGameWithColor(String colorParam, GameResponseData game) {
         String color = colorParam.toUpperCase();
 
-        if ("WHITE".equals(color)) {
-            if (game.whiteUsername() != null) {
-                return "Can't join as white";
-            }
-        } else if ("BLACK".equals(color)) {
-            if (game.blackUsername() != null) {
-                return "Can't join as black";
-            }
-        } else {
+        if ("WHITE".equals(color) && game.whiteUsername() != null) {
+            return "Can't join as white";
+        } else if ("BLACK".equals(color) && game.blackUsername() != null) {
+            return "Can't join as black";
+        } else if (!"WHITE".equals(color) && !"BLACK".equals(color)) {
             return "Invalid color.";
         }
 
@@ -146,19 +170,15 @@ public class Client {
 
             System.out.println("\n" + SET_TEXT_COLOR_GREEN + "Successfully joined game as " + color + "!" + SET_TEXT_COLOR_WHITE);
             System.out.println(SET_TEXT_COLOR_YELLOW + "Displaying initial board..." + SET_TEXT_COLOR_WHITE);
-
-            // Show the initial board
             BoardDisplay.main(new String[]{playerColor});
-
             System.out.println("\n" + SET_TEXT_COLOR_BLUE + "Use 'redraw' to refresh the board." + SET_TEXT_COLOR_WHITE);
 
-            // Launch interactive gameplay
             String authToken = server.getAuthToken();
             String serverUrl = server.getServerUrl();
-
-            GameplayClient gameplayClient = new GameplayClient(serverUrl, authToken, game.gameID());
-            gameplayClient.setPlayerColor(color.toLowerCase());
-            gameplayClient.run();
+            //GamePlayUI
+            GameplayUI gameplayUI = new GameplayUI();
+            gameplayUI.setPlayerColor(color.toLowerCase());
+            gameplayUI.start(serverUrl, authToken, game.gameID());
 
             return "";
 
@@ -189,24 +209,20 @@ public class Client {
             GameResponseData game = allGames.get(idx - 1);
             server.observeGame(game.gameID());
 
-            playerColor = "WHITE"; // Default view for observers
+            playerColor = "WHITE"; // observers default to white view
             currentGameID = game.gameID();
 
             System.out.println("\n" + SET_TEXT_COLOR_GREEN + "Successfully joined as observer!" + SET_TEXT_COLOR_WHITE);
             System.out.println(SET_TEXT_COLOR_YELLOW + "Displaying initial board..." + SET_TEXT_COLOR_WHITE);
-
-            // Show the initial board
             BoardDisplay.main(new String[]{playerColor});
-
             System.out.println("\n" + SET_TEXT_COLOR_BLUE + "Use 'redraw' to refresh the board." + SET_TEXT_COLOR_WHITE);
 
-            // Launch interactive gameplay as observer
             String authToken = server.getAuthToken();
             String serverUrl = server.getServerUrl();
 
-            GameplayClient gameplayClient = new GameplayClient(serverUrl, authToken, game.gameID());
-            gameplayClient.setPlayerColor("observer");
-            gameplayClient.run();
+            GameplayUI gameplayUI = new GameplayUI();
+            gameplayUI.setPlayerColor("observer");
+            gameplayUI.start(serverUrl, authToken, game.gameID());
 
             return "";
 
@@ -219,46 +235,26 @@ public class Client {
         }
     }
 
-    private String listGames() {
-        if (state == State.LOGGED_OUT) {
-            return "Must login first";
-        }
-        updateGames();
-        return buildGameList();
+    private String clearDataBase() throws ResponseException {
+        server.clear();
+        return "Database cleared.";
     }
 
-    private String createGame(String[] params) {
-        if (state == State.LOGGED_OUT) {
-            return "Must login first";
+    private String login(String[] params) {
+        if (state == State.LOGGED_IN) {
+            return "Must logout first";
         }
-        String name = String.join(" ", params);
-        try {
-            GameID id = server.createGame(new GameName(name));
-            updateGames();
-            for (int i = 0; i < allGames.size(); i++) {
-                if (allGames.get(i).gameID() == id.gameID()) {
-                    return "Game " + name + " created with ID " + (i + 1);
-                }
+        if (params.length == 2) {
+            UserData ud = new UserData(params[0], params[1], null);
+            try {
+                AuthData ad = server.loginUser(ud);
+                state = State.LOGGED_IN;
+                return "Logged in as " + ad.username();
+            } catch (ResponseException e) {
+                return "Invalid login";
             }
-            return "Error creating game, please try again";
-        } catch (ResponseException e) {
-            return "Couldn't create game: " + e.getMessage();
         }
-    }
-
-    private String logout() {
-        if (state == State.LOGGED_OUT) {
-            return "Must login first";
-        }
-        state = State.LOGGED_OUT;
-        playerColor = null;
-        currentGameID = null;
-        try {
-            server.logoutUser();
-        } catch (ResponseException e) {
-            return "Failed to log out";
-        }
-        return "Logged out user";
+        return "Invalid credentials";
     }
 
     private String register(String[] params) {
@@ -278,21 +274,19 @@ public class Client {
         return "Invalid credentials";
     }
 
-    private String login(String[] params) {
-        if (state == State.LOGGED_IN) {
-            return "Must logout first";
+    private String logout() {
+        if (state == State.LOGGED_OUT) {
+            return "Must login first";
         }
-        if (params.length == 2) {
-            UserData ud = new UserData(params[0], params[1], null);
-            try {
-                AuthData ad = server.loginUser(ud);
-                state = State.LOGGED_IN;
-                return "Logged in as " + ad.username();
-            } catch (ResponseException e) {
-                return "Invalid login";
-            }
+        state = State.LOGGED_OUT;
+        playerColor = null;
+        currentGameID = null;
+        try {
+            server.logoutUser();
+        } catch (ResponseException e) {
+            return "Failed to log out";
         }
-        return "Invalid credentials";
+        return "Logged out user";
     }
 
     private String buildGameList() {
@@ -358,8 +352,21 @@ public class Client {
         return added;
     }
 
-    private String clearDataBase() throws ResponseException {
-        server.clear();
-        return "Database cleared.";
+    public void handleServerMessage(JsonObject message) {
+        String type = message.get("serverMessageType").getAsString();
+
+        switch (type) {
+            case "NOTIFICATION" -> {
+                String note = message.get("message").getAsString();
+                repl.showNotification(note);
+            }
+            case "ERROR" -> {
+                String error = message.get("message").getAsString();
+                repl.showNotification("❌ Error: " + error);
+            }
+            default -> {
+                repl.showNotification("⚠️ Unknown message type: " + type);
+            }
+        }
     }
 }

@@ -41,4 +41,8 @@ public class Repl {
         String stateDisplay = Client.state == State.IN_GAME ? "IN_GAME" : Client.state.toString();
         System.out.print(SET_TEXT_COLOR_BLACK + "\n" + "[" + stateDisplay + "] >>> " + SET_TEXT_COLOR_GREEN);
     }
+
+    public void showNotification(String message) {
+        System.out.println(SET_TEXT_COLOR_MAGENTA + "\n📢 Notification: " + message);
+    }
 }

@@ -1,13 +1,10 @@
 package ui;
 
-import chess.ChessBoard;
-import chess.ChessGame;
-import chess.ChessMove;
-import chess.ChessPosition;
-import chess.ChessPiece;
+import chess.*;
 import websocket.ClientNotificationHandler;
+import websocket.WebSocketFacade;
 
-import java.util.Collection;
+import java.util.*;
 
 import static ui.EscapeSequences.*;
 
@@ -15,35 +12,149 @@ public class GameplayUI implements ClientNotificationHandler {
 
     private ChessGame currentGame;
     private String playerColor = "observer";
+    private WebSocketFacade webSocketFacade;
+    private String authToken;
+    private int gameID;
+    private final Scanner scanner = new Scanner(System.in);
 
     public GameplayUI() {
         this.currentGame = new ChessGame();
     }
 
+    public void start(String serverUrl, String authToken, int gameID) {
+        this.authToken = authToken;
+        this.gameID = gameID;
+
+        try {
+            String wsUrl = serverUrl
+                    .replace("http://", "ws://")
+                    .replace("https://", "wss://")
+                    + "/ws";
+            //pass gameplay.ui into websocketfacade
+            this.webSocketFacade = new WebSocketFacade(wsUrl, this);
+            webSocketFacade.connect(authToken, gameID);
+
+            // Command loop
+            while (true) {
+                System.out.print(SET_TEXT_COLOR_GREEN + "[GAMEPLAY] >>> " + SET_TEXT_COLOR_BLACK);
+                String input = scanner.nextLine().trim();
+                handleCommand(input);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Could not establish WebSocket connection: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void notify(String message) {
-        System.out.println(SET_TEXT_COLOR_YELLOW + "📢 " + message + SET_TEXT_COLOR_BLACK);
+        System.out.println("\n" + SET_TEXT_COLOR_YELLOW + "📢 " + message + SET_TEXT_COLOR_BLACK);
+        System.out.print(SET_TEXT_COLOR_GREEN + "[GAMEPLAY] >>> " + SET_TEXT_COLOR_BLACK);
     }
 
     @Override
     public void updateGame(ChessGame game) {
-        System.out.println("updateGame triggered");
+        System.out.println("\n🔥 UPDATEGAME CALLED!");
+        System.out.println("🔥 Thread: " + Thread.currentThread().getName());
+
+        if (game == null) {
+            System.err.println("❌ Received null game!");
+            return;
+        }
+
         this.currentGame = game;
+        System.out.println("✅ Game updated - Turn: " + game.getTeamTurn());
+        System.out.println("🎯 Player color: " + playerColor);
 
-        ChessPiece pieceAtE2 = game.getBoard().getPiece(new ChessPosition(2, 5));
-        ChessPiece pieceAtE4 = game.getBoard().getPiece(new ChessPosition(4, 5));
-        System.out.println("🔍 Piece at e2: " + (pieceAtE2 != null ? pieceAtE2.getPieceType() : "none"));
-        System.out.println("🔍 Piece at e4: " + (pieceAtE4 != null ? pieceAtE4.getPieceType() : "none"));
-        System.out.println("🔍 Current turn: " + game.getTeamTurn());
+        try {
+            System.out.print("\033[2J\033[H");
+            System.out.print(ERASE_SCREEN);
+            System.out.flush();
 
-        System.out.println(SET_TEXT_COLOR_BLUE + "📋 Game updated!" + SET_TEXT_COLOR_BLACK);
-        drawBoard();
+            System.out.println("============================================================");
+            System.out.println("🎮 CHESS BOARD UPDATED - MOVE MADE!");
+            System.out.println("============================================================");
+
+            drawBoard();
+            displayGameStatus();
+
+            System.out.println("============================================================");
+            System.out.print(SET_TEXT_COLOR_GREEN + "\n[GAMEPLAY] >>> " + SET_TEXT_COLOR_BLACK);
+            System.out.flush();
+        } catch (Exception e) {
+            System.err.println("Error in updateGame: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
-
 
     @Override
     public void displayError(String error) {
-        System.out.println(SET_TEXT_COLOR_RED + "Error: " + error + SET_TEXT_COLOR_BLACK);
+        System.out.println("\n" + SET_TEXT_COLOR_RED + "❌ Error: " + error + SET_TEXT_COLOR_BLACK);
+        System.out.print(SET_TEXT_COLOR_GREEN + "[GAMEPLAY] >>> " + SET_TEXT_COLOR_BLACK);
+    }
+
+    /**
+     * Parses and routes user commands.
+     */
+    public void handleCommand(String input) {
+        String[] tokens = input.split("\\s+");
+        if (tokens.length == 0 || tokens[0].isBlank()) {
+            return;
+        }
+
+        switch (tokens[0].toLowerCase()) {
+            case "help" -> displayHelp();
+            case "redraw" -> drawBoard();
+            case "test" -> testBoard();
+            case "status" -> displayGameInfo();
+            case "highlight" -> {
+                if (tokens.length < 2) {
+                    System.out.println("Usage: highlight <position>");
+                    return;
+                }
+                ChessPosition pos = parsePosition(tokens[1]);
+                if (pos == null) {
+                    System.out.println("Invalid position format.");
+                    return;
+                }
+                displayLegalMoves(pos);
+            }
+            case "resign" -> {
+                System.out.println("You resigned.");
+                // TODO: webSocketFacade.sendResign();
+            }
+            case "leave" -> {
+                System.out.println("You left the game.");
+                // TODO: webSocketFacade.sendLeave();
+            }
+            case "move" -> {
+                if (tokens.length < 3) {
+                    System.out.println("Usage: move <from> <to> [promotion]");
+                    return;
+                }
+                ChessPosition from = parsePosition(tokens[1]);
+                ChessPosition to = parsePosition(tokens[2]);
+                if (from == null || to == null) {
+                    System.out.println("Invalid move format.");
+                    return;
+                }
+                ChessPiece.PieceType promotion = null;
+                if (tokens.length == 4) {
+                    promotion = switch (tokens[3].toLowerCase()) {
+                        case "queen" -> ChessPiece.PieceType.QUEEN;
+                        case "rook" -> ChessPiece.PieceType.ROOK;
+                        case "bishop" -> ChessPiece.PieceType.BISHOP;
+                        case "knight" -> ChessPiece.PieceType.KNIGHT;
+                        default -> null;
+                    };
+                }
+                ChessMove move = new ChessMove(from, to, promotion);
+                System.out.println("Submitting move: " +
+                        positionToString(from) + " → " + positionToString(to));
+                // TODO: webSocketFacade.sendMove(move);
+            }
+            default -> System.out.println("Unknown command. Type 'help' for options.");
+        }
     }
 
     public void displayHelp() {
@@ -53,34 +164,33 @@ public class GameplayUI implements ClientNotificationHandler {
         System.out.println("Available Commands:");
         System.out.println("  help                     - Show this help menu");
         System.out.println("  redraw                   - Redraw the chess board");
+        System.out.println("  test                     - Test board display with fresh game");
         System.out.println("  move <from> <to>         - Make a move (e.g., 'move e2 e4')");
         System.out.println("  move <from> <to> <piece> - Make a move with pawn promotion");
-        System.out.println("                            (e.g., 'move e7 e8 queen')");
         System.out.println("  highlight <pos>          - Show legal moves for piece at position");
-        System.out.println("                            (e.g., 'highlight e2')");
         System.out.println("  resign                   - Resign from the game");
         System.out.println("  leave                    - Leave the game");
         System.out.println("  status                   - Show current game information");
-        System.out.println();
-        System.out.println("Position Format: Use algebraic notation (a1-h8)");
-        System.out.println("Examples: a1, e4, h8");
         System.out.println("=".repeat(50) + SET_TEXT_COLOR_BLACK);
     }
 
+    public void testBoard() {
+        System.out.println("🧪 TESTING BOARD DISPLAY");
+        ChessGame testGame = new ChessGame();
+        this.currentGame = testGame;
+        System.out.print(ERASE_SCREEN);
+        drawBoard();
+    }
+
     public void drawBoard() {
-        if (currentGame == null) {
-            System.out.println("No game loaded");
+        if (currentGame == null || currentGame.getBoard() == null) {
+            System.out.println("❌ No game or board loaded");
             return;
         }
-
         ChessBoard board = currentGame.getBoard();
-        if (board == null) {
-            System.out.println("Game board is null");
-            return;
-        }
-
-        boolean whiteOnBottom = !"BLACK".equalsIgnoreCase(playerColor);
-        System.out.println("Drawing board with whiteOnBottom = " + whiteOnBottom);
+        boolean whiteOnBottom = !"black".equalsIgnoreCase(playerColor);
+        System.out.println("🔍 Drawing board - White on bottom: " + whiteOnBottom +
+                " (player: " + playerColor + ")");
         drawChessBoard(board, whiteOnBottom, null);
     }
 
@@ -89,27 +199,23 @@ public class GameplayUI implements ClientNotificationHandler {
             System.out.println("No game loaded");
             return;
         }
-
         Collection<ChessMove> legalMoves = currentGame.validMoves(position);
         if (legalMoves.isEmpty()) {
             System.out.println("No legal moves available for piece at " +
                     positionToString(position));
             return;
         }
-
-        System.out.println("Legal moves for piece at " +
+        System.out.println("\nLegal moves for piece at " +
                 positionToString(position) + ":");
-        boolean whiteOnBottom = !"BLACK".equalsIgnoreCase(playerColor);
+        boolean whiteOnBottom = !"black".equalsIgnoreCase(playerColor);
         drawChessBoard(currentGame.getBoard(), whiteOnBottom, legalMoves);
     }
 
     private void drawChessBoard(ChessBoard board,
                                 boolean whiteOnBottom,
                                 Collection<ChessMove> highlightMoves) {
-        // Build highlight set and track selected start position
-        var highlightPositions = new java.util.HashSet<ChessPosition>();
+        Set<ChessPosition> highlightPositions = new HashSet<>();
         ChessPosition selectedPosition = null;
-
         if (highlightMoves != null) {
             for (ChessMove move : highlightMoves) {
                 highlightPositions.add(move.getEndPosition());
@@ -117,8 +223,8 @@ public class GameplayUI implements ClientNotificationHandler {
             }
         }
 
-        // Column headers
-        System.out.print("   ");
+        System.out.println();
+        System.out.print(SET_BG_COLOR_LIGHT_GREY + SET_TEXT_COLOR_BLACK + "   ");
         if (whiteOnBottom) {
             for (char c = 'a'; c <= 'h'; c++) {
                 System.out.print(" " + c + " ");
@@ -128,12 +234,12 @@ public class GameplayUI implements ClientNotificationHandler {
                 System.out.print(" " + c + " ");
             }
         }
-        System.out.println();
+        System.out.println(RESET_ALL);
 
-        // Rows
         for (int row = 1; row <= 8; row++) {
             int displayRow = whiteOnBottom ? 9 - row : row;
-            System.out.print(" " + displayRow + " ");
+            System.out.print(SET_BG_COLOR_LIGHT_GREY +
+                    SET_TEXT_COLOR_BLACK + " " + displayRow + " " + RESET_ALL);
 
             for (int col = 1; col <= 8; col++) {
                 int displayCol = whiteOnBottom ? col : 9 - col;
@@ -147,29 +253,27 @@ public class GameplayUI implements ClientNotificationHandler {
                 } else if (highlightPositions.contains(pos)) {
                     bgColor = isLight ? SET_BG_COLOR_GREEN : SET_BG_COLOR_DARK_GREEN;
                 } else {
-                    bgColor = isLight ? SET_BG_COLOR_LIGHT_GREY : SET_BG_COLOR_DARK_GREY;
+                    bgColor = isLight ? SET_BG_COLOR_WHITE : SET_BG_COLOR_BLACK;
                 }
 
                 System.out.print(bgColor);
-
                 if (piece == null) {
                     System.out.print("   ");
                 } else {
                     String symbol = getPieceSymbol(piece);
                     String textColor = piece.getTeamColor() == ChessGame.TeamColor.WHITE
-                            ? SET_TEXT_COLOR_WHITE
-                            : SET_TEXT_COLOR_BLACK;
+                            ? SET_TEXT_COLOR_BLUE
+                            : SET_TEXT_COLOR_RED;
                     System.out.print(textColor + " " + symbol + " ");
                 }
-
-                System.out.print(RESET_BG_COLOR + RESET_TEXT_COLOR);
+                System.out.print(RESET_ALL);
             }
 
-            System.out.println(" " + displayRow);
+            System.out.println(SET_BG_COLOR_LIGHT_GREY +
+                    SET_TEXT_COLOR_BLACK + " " + displayRow + " " + RESET_ALL);
         }
 
-        // Footer headers
-        System.out.print("   ");
+        System.out.print(SET_BG_COLOR_LIGHT_GREY + SET_TEXT_COLOR_BLACK + "   ");
         if (whiteOnBottom) {
             for (char c = 'a'; c <= 'h'; c++) {
                 System.out.print(" " + c + " ");
@@ -179,7 +283,11 @@ public class GameplayUI implements ClientNotificationHandler {
                 System.out.print(" " + c + " ");
             }
         }
+        System.out.println(RESET_ALL);
         System.out.println();
+
+        System.out.println(SET_TEXT_COLOR_BLUE +
+                "Current turn: " + currentGame.getTeamTurn() + RESET_ALL);
     }
 
     private String getPieceSymbol(ChessPiece piece) {
@@ -194,17 +302,23 @@ public class GameplayUI implements ClientNotificationHandler {
     }
 
     public ChessPosition parsePosition(String input) {
-        if (input == null || input.length() != 2) return null;
+        if (input == null || input.length() != 2) {
+            return null;
+        }
         char file = Character.toLowerCase(input.charAt(0));
         char rank = input.charAt(1);
-        if (file < 'a' || file > 'h' || rank < '1' || rank > '8') return null;
+        if (file < 'a' || file > 'h' || rank < '1' || rank > '8') {
+            return null;
+        }
         int col = file - 'a' + 1;
         int row = rank - '1' + 1;
         return new ChessPosition(row, col);
     }
 
     public String positionToString(ChessPosition pos) {
-        if (pos == null) return "";
+        if (pos == null) {
+            return "";
+        }
         char file = (char) ('a' + pos.getColumn() - 1);
         char rank = (char) ('1' + pos.getRow() - 1);
         return "" + file + rank;
@@ -220,23 +334,30 @@ public class GameplayUI implements ClientNotificationHandler {
         System.out.println("Current turn: " + currentGame.getTeamTurn());
         System.out.println("Your role: " + playerColor);
 
+        displayGameStatus();
+        System.out.println(SET_TEXT_COLOR_BLACK);
+    }
+
+    private void displayGameStatus() {
+        if (currentGame == null) {
+            return;
+        }
+
         if (currentGame.isInCheck(ChessGame.TeamColor.WHITE)) {
-            System.out.println(SET_TEXT_COLOR_RED + "WHITE is in check!" + SET_TEXT_COLOR_BLUE);
+            System.out.println(SET_TEXT_COLOR_RED + "⚠️  WHITE is in check!" + RESET_ALL);
         }
         if (currentGame.isInCheck(ChessGame.TeamColor.BLACK)) {
-            System.out.println(SET_TEXT_COLOR_RED + "BLACK is in check!" + SET_TEXT_COLOR_BLUE);
+            System.out.println(SET_TEXT_COLOR_RED + "⚠️  BLACK is in check!" + RESET_ALL);
         }
 
         if (currentGame.isInCheckmate(ChessGame.TeamColor.WHITE)) {
-            System.out.println(SET_TEXT_COLOR_RED + "WHITE is in checkmate! BLACK wins!" + SET_TEXT_COLOR_BLUE);
+            System.out.println(SET_TEXT_COLOR_RED + "🏁 WHITE is in checkmate! BLACK wins!" + RESET_ALL);
         } else if (currentGame.isInCheckmate(ChessGame.TeamColor.BLACK)) {
-            System.out.println(SET_TEXT_COLOR_RED + "BLACK is in checkmate! WHITE wins!" + SET_TEXT_COLOR_BLUE);
+            System.out.println(SET_TEXT_COLOR_RED + "🏁 BLACK is in checkmate! WHITE wins!" + RESET_ALL);
         } else if (currentGame.isInStalemate(ChessGame.TeamColor.WHITE) ||
                 currentGame.isInStalemate(ChessGame.TeamColor.BLACK)) {
-            System.out.println(SET_TEXT_COLOR_YELLOW + "Game is in stalemate!" + SET_TEXT_COLOR_BLUE);
+            System.out.println(SET_TEXT_COLOR_YELLOW + "🤝 Game is in stalemate!" + RESET_ALL);
         }
-
-        System.out.println(SET_TEXT_COLOR_BLACK);
     }
 
     public void setPlayerColor(String color) {

@@ -24,11 +24,15 @@ public class ServerMessageDeserializer implements JsonDeserializer<ServerMessage
 
         System.out.println("Deserializing ServerMessage of type: " + type);
 
-        return switch (type) {
-            case LOAD_GAME -> context.deserialize(json, LoadGameMessage.class);
-            case NOTIFICATION -> context.deserialize(json, NotificationMessage.class);
-            case ERROR -> context.deserialize(json, ErrorMessage.class);
-        };
+        switch (type) {
+            case LOAD_GAME:
+                return context.deserialize(json, LoadGameMessage.class);
+            case NOTIFICATION:
+                return context.deserialize(json, NotificationMessage.class);
+            case ERROR:
+                return context.deserialize(json, ErrorMessage.class);
+            default:
+                throw new JsonParseException("Unhandled serverMessageType: " + type);
+        }
     }
 }
-
