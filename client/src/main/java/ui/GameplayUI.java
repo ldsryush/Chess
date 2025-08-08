@@ -21,9 +21,12 @@ public class GameplayUI implements ClientNotificationHandler {
         this.currentGame = new ChessGame();
     }
 
+    private boolean gameActive = true;
+
     public void start(String serverUrl, String authToken, int gameID) {
         this.authToken = authToken;
         this.gameID = gameID;
+        this.gameActive = true;
 
         try {
             String wsUrl = serverUrl
@@ -41,7 +44,7 @@ public class GameplayUI implements ClientNotificationHandler {
             }
 
             // Command loop
-            while (true) {
+            while (gameActive) {
                 System.out.print(SET_TEXT_COLOR_GREEN + "[GAMEPLAY] >>> " + SET_TEXT_COLOR_BLACK);
                 String input = scanner.nextLine().trim();
                 handleCommand(input);
@@ -141,7 +144,9 @@ public class GameplayUI implements ClientNotificationHandler {
                 } catch (Exception e) {
                     System.err.println("❌ Failed to leave: " + e.getMessage());
                 }
+                System.out.println(SET_TEXT_COLOR_GREEN + "Returning to main menu..." + SET_TEXT_COLOR_BLACK);
                 // Exit the gameplay loop to return to Post-Login UI
+                gameActive = false;
                 return;
             }
             case "move" -> {
@@ -362,18 +367,7 @@ public class GameplayUI implements ClientNotificationHandler {
             return;
         }
 
-        if (currentGame.isInCheck(ChessGame.TeamColor.WHITE)) {
-            System.out.println(SET_TEXT_COLOR_RED + "⚠️  WHITE is in check!" + RESET_ALL);
-        }
-        if (currentGame.isInCheck(ChessGame.TeamColor.BLACK)) {
-            System.out.println(SET_TEXT_COLOR_RED + "⚠️  BLACK is in check!" + RESET_ALL);
-        }
-
-        if (currentGame.isInCheckmate(ChessGame.TeamColor.WHITE)) {
-            System.out.println(SET_TEXT_COLOR_RED + "🏁 WHITE is in checkmate! BLACK wins!" + RESET_ALL);
-        } else if (currentGame.isInCheckmate(ChessGame.TeamColor.BLACK)) {
-            System.out.println(SET_TEXT_COLOR_RED + "🏁 BLACK is in checkmate! WHITE wins!" + RESET_ALL);
-        } else if (currentGame.isInStalemate(ChessGame.TeamColor.WHITE) ||
+        if (currentGame.isInStalemate(ChessGame.TeamColor.WHITE) ||
                 currentGame.isInStalemate(ChessGame.TeamColor.BLACK)) {
             System.out.println(SET_TEXT_COLOR_YELLOW + "🤝 Game is in stalemate!" + RESET_ALL);
         }
